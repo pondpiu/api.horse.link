@@ -23,7 +23,11 @@
   },
   "homepage": "https://github.com/horse-link/api.horse.link#readme",
   "dependencies": {
+    "dotenv": "^10.0.0",
     "express": "^4.17.1",
-    "memory-cache": "^0.2.0"
+    "memory-cache": "^0.2.0",
+    "moment": "^2.29.1",
+    "web3": "^1.6.0",
+    "web3-eth-accounts": "^1.6.0"
   }
 }
