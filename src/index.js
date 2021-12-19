@@ -7,15 +7,18 @@ const web3 = require("web3");
 const accounts = require("web3-eth-accounts");
 const cache = require("memory-cache");
 const axios = require("axios");
+const uuid = requuie("uuid");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 //
 app.get("/meetings", async (req, res) => {
+  const today = new Date();
+  today.toISOString().split('T')[0];
   const config = {
     method: "get",
-    url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2021-11-07/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false",
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
     headers: {},
   };
 
@@ -44,11 +47,13 @@ app.get("/meetings/:date", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    owner: "",
+    nonce: "",
+    owner: "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729",
     hash_256: "",
     hash: "",
     signature: "",
     created: now,
+    expires: "",
     meetings: cache.get("meetings"),
   };
 
