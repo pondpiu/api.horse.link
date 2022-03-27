@@ -16,25 +16,18 @@ app.use(cors())
 const PORT = process.env.PORT || 3000;
 
 //
-app.get("/meetings", async (req, res) => {
-  const today = new Date();
-  today.toISOString().split('T')[0];
-  const config = {
-    method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
-    headers: {},
-  };
-
+app.get("/meetings", async (req, res) => { 
   const meetings = await cache.get("meetings");
   if (!meetings) {
-
-    const date = "2022-03-27"; //Date.now();
+    const today = new Date();
+    today.toISOString().split("T")[0];
 
     const config = {
       method: "get",
-      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+      headers: {},
     };
-
+  
     const response = await axios(config);
     const meetings = response.data.meetings.map((item) => {
       const meeting = {};
@@ -73,7 +66,6 @@ app.get("/meetings/:date", async (req, res) => {
   const meetings_response = {
     nonce: "",
     owner: "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729",
-    hash_256: "",
     hash: "",
     signature: "",
     created: now,
@@ -82,7 +74,7 @@ app.get("/meetings/:date", async (req, res) => {
   };
 
   const hash = crypto.createHash("sha256", meetings_response);
-  meetings_response.hash_256 = hash.digest("hex");
+  meetings_response.hash = hash.digest("hex");
 
   // rally gas shield once will april foster fly direct frame actress tone
   const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
