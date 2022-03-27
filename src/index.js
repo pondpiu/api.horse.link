@@ -1,5 +1,7 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
+
 const moment = require("moment");
 
 const crypto = require("crypto");
@@ -9,30 +11,47 @@ const cache = require("memory-cache");
 const axios = require("axios");
 
 const app = express();
+app.use(cors())
 const PORT = process.env.PORT || 3000;
 
 //
 app.get("/meetings", async (req, res) => {
-  const config = {
-    method: "get",
-    url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2021-11-07/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false",
-    headers: {},
-  };
 
-  const response = await axios(config);
-  const meetings = response.data.meetings.map((item) => item.meetingName);
-  cache.put("meetings", meetings, 1000 * 60 * 60);
-  console.log(meetings);
+  const meetings = await cache.get("meetings");
+  if (!meetings) {
 
-  res.json(cache.get("meetings"));
+    const date = "2022-03-27"; //Date.now();
+
+    const config = {
+      method: "get",
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`
+    };
+
+    const response = await axios(config);
+    const meetings = response.data.meetings.map((item) => {
+      const meeting = {};
+      meeting.id = item.venueMnemonic;
+      meeting.name = item.meetingName;
+      meeting.location = item.location;
+      meeting.date = item.meetingDate;
+      
+      return meeting;
+    });
+
+    console.log(response.data.meetings);
+
+    cache.put("meetings", meetings, 1000 * 60 * 60);
+    console.log(meetings);
+  }
+
+  res.json(meetings);
 });
 
 //
 app.get("/meetings/:date", async (req, res) => {
   const config = {
     method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${req.params.date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
-    headers: {},
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${req.params.date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`
   };
 
   const response = await axios(config);
