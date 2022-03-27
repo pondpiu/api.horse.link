@@ -9,7 +9,7 @@ const web3 = require("web3");
 const accounts = require("web3-eth-accounts");
 const cache = require("memory-cache");
 const axios = require("axios");
-const uuid = requuie("uuid");
+const uuid = require("uuid");
 
 const app = express();
 app.use(cors())
@@ -20,11 +20,13 @@ app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
   if (!meetings) {
     const today = new Date();
-    today.toISOString().split("T")[0];
+    const _today = today.toISOString().split("T")[0];
+
+    console.log(_today);
 
     const config = {
       method: "get",
-      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${_today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
       headers: {},
     };
   
