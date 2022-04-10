@@ -7,7 +7,7 @@ This project allows users to create a signed data to add to Horse Link dapps.
 ## Starting
 
 ```bash
-    cp .env.sample .env
+    cp .env.developer .env
     yarn install
     yarn start
 ```
