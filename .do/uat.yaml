@@ -16,4 +16,4 @@ services:
   routes:
   - path: /
   run_command: yarn start
-  source_dir: /
+  source_dir: /src
