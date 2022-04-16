@@ -12,8 +12,25 @@ const axios = require("axios");
 const uuid = require("uuid");
 
 const app = express();
-app.use(cors())
+app.use(cors());
 const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+// 
+app.get("/odds/EAG/:race", (req, res) => {
+  const token = uuid.v4();
+
+  const config = {
+    method: "get",
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${_today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+    headers: {},
+  };
+
+  const response = await axios(config);
+});
 
 //
 app.get("/meetings", async (req, res) => { 
@@ -21,8 +38,6 @@ app.get("/meetings", async (req, res) => {
   if (!meetings) {
     const today = new Date();
     const _today = today.toISOString().split("T")[0];
-
-    console.log(_today);
 
     const config = {
       method: "get",
@@ -40,8 +55,6 @@ app.get("/meetings", async (req, res) => {
       
       return meeting;
     });
-
-    console.log(response.data.meetings);
 
     cache.put("meetings", meetings, 1000 * 60 * 60);
     console.log(meetings);
@@ -66,8 +79,8 @@ app.get("/meetings/:date", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    nonce: "",
-    owner: "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729",
+    id: "",
+    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     hash: "",
     signature: "",
     created: now,
