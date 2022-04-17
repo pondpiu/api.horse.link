@@ -7,6 +7,8 @@ const moment = require("moment");
 const crypto = require("crypto");
 const web3 = require("web3");
 const accounts = require("web3-eth-accounts");
+const ethers = require("ethers");
+
 const cache = require("memory-cache");
 const axios = require("axios");
 const uuid = require("uuid");
@@ -15,34 +17,50 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 3000;
 
-// Ping
+const getToday = () => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+}
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
 // 
-app.get("/odds/EAG/:race", (req, res) => {
-  const token = uuid.v4();
+app.get("/odds/:track/:race/win", async (req, res) => {
+  const today = getToday();
 
+  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
   const config = {
     method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${_today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
     headers: {},
   };
 
+  // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
   const response = await axios(config);
+  let odds = response.data.runners.map((item) => {
+    const runner = {};
+    runner.id = uuid.v4();
+    runner.number = item.runnerNumber;
+    runner.start = 0;
+    runner.end = 0;
+    runner.odds = item.fixedOdds.returnWin * 100;
+    runner.signature = crypto.Hash.sha256(JSON.stringify(runner)).toString("hex");
+  });
+
+  res.json(odds);
 });
 
 //
 app.get("/meetings", async (req, res) => { 
   const meetings = await cache.get("meetings");
   if (!meetings) {
-    const today = new Date();
-    const _today = today.toISOString().split("T")[0];
+    const today = getToday();
 
     const config = {
       method: "get",
-      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${_today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
       headers: {},
     };
   
@@ -103,6 +121,28 @@ app.get("/meetings/:date", async (req, res) => {
   meetings_response.hash = signature.messageHash;
 
   res.json(meetings_response);
+});
+
+app.post("/faucet", async (req, res) => {
+  const to = req.body.to;
+  const amount = req.body.amount;
+
+  const abi = [
+    "function transfer(uint256 amount, address to)"
+  ];
+
+  const provider = ethers.getDefaultProvider();
+  const contractAddress = "0x1Ab87d843E31248e0e094dc7444A40048ee01FB7";
+  const contract = new ethers.Contract(contractAddress, abi, provider);
+
+  const privateKey = process.env.PRIVATE_KEY;
+  const wallet = new ethers.Wallet(privateKey, provider);
+
+  const contractWithSigner = contract.connect(wallet);
+  const tx = await contractWithSigner.transfer(amount, to);
+
+  console.log(tx.hash);
+  res.json({ tx: tx.hash });
 });
 
 app.listen(PORT, (err) => {
