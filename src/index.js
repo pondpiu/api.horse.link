@@ -5,7 +5,6 @@ const cors = require("cors");
 const moment = require("moment");
 
 const crypto = require("crypto");
-const web3 = require("web3");
 const accounts = require("web3-eth-accounts");
 const ethers = require("ethers");
 
@@ -18,15 +17,19 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 const getToday = () => {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
-}
+  const today = new Date().toLocaleString("en-US", {
+    timeZone: "Australia/Brisbane"
+  });
+  moment.suppressDeprecationWarnings = true;
+  return moment(today).format("YYYY-MM-DD");
+};
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  const today = getToday();
+  res.send(`Hello World ${today}`);
 });
 
-// 
+//
 app.get("/odds/:track/:race/win", async (req, res) => {
   const today = getToday();
 
@@ -34,26 +37,28 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   const config = {
     method: "get",
     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
-    headers: {},
+    headers: {}
   };
 
   // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
   const response = await axios(config);
-  let odds = response.data.runners.map((item) => {
+  let odds = response.data.runners.map(item => {
     const runner = {};
     runner.id = uuid.v4();
     runner.number = item.runnerNumber;
     runner.start = 0;
     runner.end = 0;
     runner.odds = item.fixedOdds.returnWin * 100;
-    runner.signature = crypto.Hash.sha256(JSON.stringify(runner)).toString("hex");
+    runner.signature = crypto.Hash.sha256(JSON.stringify(runner)).toString(
+      "hex"
+    );
   });
 
   res.json(odds);
 });
 
 //
-app.get("/meetings", async (req, res) => { 
+app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
   if (!meetings) {
     const today = getToday();
@@ -61,17 +66,17 @@ app.get("/meetings", async (req, res) => {
     const config = {
       method: "get",
       url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
-      headers: {},
+      headers: {}
     };
-  
+
     const response = await axios(config);
-    const meetings = response.data.meetings.map((item) => {
+    const meetings = response.data.meetings.map(item => {
       const meeting = {};
       meeting.id = item.venueMnemonic;
       meeting.name = item.meetingName;
       meeting.location = item.location;
       meeting.date = item.meetingDate;
-      
+
       return meeting;
     });
 
@@ -90,7 +95,7 @@ app.get("/meetings/:date", async (req, res) => {
   };
 
   const response = await axios(config);
-  const meetings = response.data.meetings.map((item) => item.meetingName);
+  const meetings = response.data.meetings.map(item => item.meetingName);
   cache.put("meetings", meetings, 1000 * 60 * 60);
   console.log(meetings);
 
@@ -104,7 +109,7 @@ app.get("/meetings/:date", async (req, res) => {
     signature: "",
     created: now,
     expires: "",
-    meetings: cache.get("meetings"),
+    meetings: cache.get("meetings")
   };
 
   const hash = crypto.createHash("sha256", meetings_response);
@@ -127,9 +132,7 @@ app.post("/faucet", async (req, res) => {
   const to = req.body.to;
   const amount = req.body.amount;
 
-  const abi = [
-    "function transfer(uint256 amount, address to)"
-  ];
+  const abi = ["function transfer(uint256 amount, address to)"];
 
   const provider = ethers.getDefaultProvider();
   const contractAddress = "0x1Ab87d843E31248e0e094dc7444A40048ee01FB7";
@@ -145,7 +148,7 @@ app.post("/faucet", async (req, res) => {
   res.json({ tx: tx.hash });
 });
 
-app.listen(PORT, (err) => {
+app.listen(PORT, err => {
   if (err) console.log(err);
   console.log("Server listening on PORT", PORT);
 });
