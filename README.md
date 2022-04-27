@@ -1,5 +1,5 @@
 # api.horse.link
-NodeJS API for horse link
+NodeJS API for horse link http://api.horse.link
 
 # Introduction
 This project allows users to create a signed data to add to Horse Link dapps.
