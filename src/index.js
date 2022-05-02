@@ -29,6 +29,10 @@ app.get("/", (req, res) => {
   res.send(`Hello World ${today}`);
 });
 
+app.get("/pools", async (req, res) => {
+
+});
+
 //
 app.get("/odds/:track/:race/win", async (req, res) => {
   const today = getToday();
