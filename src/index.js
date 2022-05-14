@@ -29,6 +29,10 @@ app.get("/", (req, res) => {
   res.send(`Hello World ${today}`);
 });
 
+// app.get("/runners/:track/", async (req, res) => {
+//   const today = getToday();
+// });
+
 //
 app.get("/odds/:track/:race/win", async (req, res) => {
   const today = getToday();
@@ -57,45 +61,71 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   res.json(odds);
 });
 
+const getMeetings = async (date) => {
+  const config = {
+    method: "get",
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+    headers: {}
+  };
+
+  const response = await axios(config);
+
+  const meetings = response.data.meetings.map(item => {
+    const meeting = {};
+    meeting.id = item.venueMnemonic.toUpperCase();
+    meeting.name = item.meetingName.toUpperCase();
+    meeting.location = item.location.toUpperCase();
+    meeting.date = item.meetingDate;
+
+    return meeting;
+  });
+
+  return meetings;
+};
+
 //
 app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
   if (!meetings) {
     const today = getToday();
+    const meetings = await getMeetings(today);
 
-    const config = {
-      method: "get",
-      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
-      headers: {}
-    };
-
-    const response = await axios(config);
-    const meetings = response.data.meetings.map(item => {
-      const meeting = {};
-      meeting.id = item.venueMnemonic;
-      meeting.name = item.meetingName;
-      meeting.location = item.location;
-      meeting.date = item.meetingDate;
-
-      return meeting;
-    });
-
-    cache.put("meetings", meetings, 1000 * 60 * 60);
+    cache.put("meetings", meetings, 1000 * 60);
     console.log(meetings);
   }
 
-  res.json(meetings);
+  const now = moment().unix();
+  const id = crypto.randomUUID();
+
+  // https://eips.ethereum.org/EIPS/eip-191
+  let meetings_response = {
+    id: id,
+    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
+    signature: "",
+    created: now,
+    expires: now + 60 * 1000,
+    meetings: cache.get("meetings")
+  };
+
+  res.json(meetings_response);
 });
 
 //
 app.get("/meetings/:date", async (req, res) => {
+  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-05-14/meetings?jurisdiction=QLD
+
   const config = {
     method: "get",
     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${req.params.date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`
   };
 
   const response = await axios(config);
-  const meetings = response.data.meetings.map(item => item.meetingName);
+  let meetings = response.data.meetings.map(item => item.meetingName);
+
+  // meetings.forEach(element => {
+  //   element.races = ["test"];
+  // });
+
   cache.put("meetings", meetings, 1000 * 60 * 60);
   console.log(meetings);
 
@@ -108,7 +138,7 @@ app.get("/meetings/:date", async (req, res) => {
     hash: "",
     signature: "",
     created: now,
-    expires: "",
+    expires: now + 60 * 1000,
     meetings: cache.get("meetings")
   };
 
