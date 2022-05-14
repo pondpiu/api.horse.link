@@ -99,7 +99,6 @@ app.get("/meetings", async (req, res) => {
   let meetings_response = {
     id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
-    signature: "",
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -112,17 +111,7 @@ app.get("/meetings", async (req, res) => {
 app.get("/meetings/:date", async (req, res) => {
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-05-14/meetings?jurisdiction=QLD
 
-  const config = {
-    method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${req.params.date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`
-  };
-
-  const response = await axios(config);
-  let meetings = response.data.meetings.map(item => item.meetingName);
-
-  // meetings.forEach(element => {
-  //   element.races = ["test"];
-  // });
+  let meetings = getMeetings(req.params.date);
 
   cache.put("meetings", meetings, 1000 * 60 * 60);
   console.log(meetings);
@@ -178,5 +167,5 @@ app.post("/faucet", async (req, res) => {
 
 app.listen(PORT, err => {
   if (err) console.log(err);
-  console.log("Server listening on PORT", PORT);
+  console.log(`Server listening on PORT ${PORT}`);
 });
