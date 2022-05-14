@@ -10,7 +10,6 @@ const ethers = require("ethers");
 
 const cache = require("memory-cache");
 const axios = require("axios");
-const uuid = require("uuid");
 
 const app = express();
 app.use(cors());
@@ -24,14 +23,36 @@ const getToday = () => {
   return moment(today).format("YYYY-MM-DD");
 };
 
+const getMeetings = async (date) => {
+  const config = {
+    method: "get",
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
+    headers: {}
+  };
+
+  const response = await axios(config);
+
+  const meetings = response.data.meetings.map(item => {
+    const meeting = {};
+    meeting.id = item.venueMnemonic.toUpperCase();
+    meeting.name = item.meetingName.toUpperCase();
+    meeting.location = item.location.toUpperCase();
+    meeting.date = item.meetingDate;
+
+    return meeting;
+  });
+
+  return meetings;
+};
+
 app.get("/", (req, res) => {
   const today = getToday();
   res.send(`Hello World ${today}`);
 });
 
-// app.get("/runners/:track/", async (req, res) => {
-//   const today = getToday();
-// });
+app.get("/pools", async (req, res) => {
+  // todo
+});
 
 //
 app.get("/odds/:track/:race/win", async (req, res) => {
@@ -61,28 +82,6 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   res.json(odds);
 });
 
-const getMeetings = async (date) => {
-  const config = {
-    method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
-    headers: {}
-  };
-
-  const response = await axios(config);
-
-  const meetings = response.data.meetings.map(item => {
-    const meeting = {};
-    meeting.id = item.venueMnemonic.toUpperCase();
-    meeting.name = item.meetingName.toUpperCase();
-    meeting.location = item.location.toUpperCase();
-    meeting.date = item.meetingDate;
-
-    return meeting;
-  });
-
-  return meetings;
-};
-
 //
 app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
@@ -95,11 +94,10 @@ app.get("/meetings", async (req, res) => {
   }
 
   const now = moment().unix();
-  const id = crypto.randomUUID();
 
   // https://eips.ethereum.org/EIPS/eip-191
   let meetings_response = {
-    id: id,
+    id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     signature: "",
     created: now,
@@ -133,7 +131,7 @@ app.get("/meetings/:date", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    id: "",
+    id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     hash: "",
     signature: "",
