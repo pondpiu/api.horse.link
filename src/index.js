@@ -111,7 +111,7 @@ app.get("/meetings", async (req, res) => {
 app.get("/meetings/:date", async (req, res) => {
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-05-14/meetings?jurisdiction=QLD
 
-  let meetings = getMeetings(req.params.date);
+  const meetings = getMeetings(req.params.date);
 
   cache.put("meetings", meetings, 1000 * 60 * 60);
   console.log(meetings);
@@ -122,8 +122,6 @@ app.get("/meetings/:date", async (req, res) => {
   const meetings_response = {
     id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
-    hash: "",
-    signature: "",
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -139,10 +137,13 @@ app.get("/meetings/:date", async (req, res) => {
   const ethAccounts = new accounts();
   const signature = ethAccounts.sign(meetings_response, private_key);
 
-  meetings_response.signature = signature.signature;
-  meetings_response.hash = signature.messageHash;
+  const response = {
+    data : meetings_response,
+    signature: signature.signature,
+    hash: signature.hash
+  };
 
-  res.json(meetings_response);
+  res.json(response);
 });
 
 app.post("/faucet", async (req, res) => {
