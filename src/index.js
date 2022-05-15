@@ -45,6 +45,15 @@ const getMeetings = async (date) => {
   return meetings;
 };
 
+const sign = (payload) => {
+  // rally gas shield once will april foster fly direct frame actress tone
+  const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
+  const ethAccounts = new accounts();
+  const signature = ethAccounts.sign(payload, private_key);
+
+  return signature;
+}
+
 app.get("/", (req, res) => {
   const today = getToday();
   res.send(`Hello World ${today}`);
@@ -96,7 +105,7 @@ app.get("/meetings", async (req, res) => {
   const now = moment().unix();
 
   // https://eips.ethereum.org/EIPS/eip-191
-  let meetings_response = {
+  const meetings_response = {
     id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     created: now,
@@ -127,15 +136,10 @@ app.get("/meetings/:date", async (req, res) => {
     meetings: cache.get("meetings")
   };
 
-  const hash = crypto.createHash("sha256", meetings_response);
-  meetings_response.hash = hash.digest("hex");
+  // const hash = crypto.createHash("sha256", meetings_response);
+  // meetings_response.hash = hash.digest("hex");
 
-  // rally gas shield once will april foster fly direct frame actress tone
-  const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
-  // const account = new web3.eth.Account(private_key);
-  console.log(private_key);
-  const ethAccounts = new accounts();
-  const signature = ethAccounts.sign(meetings_response, private_key);
+  const signature = sign(meetings_response);
 
   const response = {
     data : meetings_response,
