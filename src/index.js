@@ -49,10 +49,14 @@ const sign = (payload) => {
   // rally gas shield once will april foster fly direct frame actress tone
   const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
   const ethAccounts = new accounts();
-  const signature = ethAccounts.sign(payload, private_key);
+  const signature = ethAccounts.signMessage(payload, private_key);
 
   return signature;
 }
+
+// const signMessage = (payload) => {
+//   const signer = new ethers.Signer();
+// }
 
 app.get("/", (req, res) => {
   const today = getToday();
