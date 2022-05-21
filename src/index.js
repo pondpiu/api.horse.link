@@ -49,14 +49,10 @@ const sign = (payload) => {
   // rally gas shield once will april foster fly direct frame actress tone
   const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
   const ethAccounts = new accounts();
-  const signature = ethAccounts.signMessage(payload, private_key);
+  const signature = ethAccounts.sign(payload, private_key);
 
   return signature;
 }
-
-// const signMessage = (payload) => {
-//   const signer = new ethers.Signer();
-// }
 
 app.get("/", (req, res) => {
   const today = getToday();
@@ -71,6 +67,9 @@ app.get("/vaults", async (req, res) => {
 app.get("/odds/:track/:race/win", async (req, res) => {
   const today = getToday();
 
+  const track = req.params.track;
+  const race = req.params.race;
+
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
   const config = {
     method: "get",
@@ -78,18 +77,24 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     headers: {}
   };
 
+  console.log(config);
+
   // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
+
+  const market_id = crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
+
   const response = await axios(config);
   let odds = response.data.runners.map(item => {
     const runner = {};
-    runner.id = uuid.v4();
-    runner.number = item.runnerNumber;
+    runner.id = item.runnerNumber;
+    runner.nonce = crypto.randomUUID();
+    runner.market_id = market_id;
     runner.start = 0;
     runner.end = 0;
     runner.odds = item.fixedOdds.returnWin * 100;
-    runner.signature = crypto.Hash.sha256(JSON.stringify(runner)).toString(
-      "hex"
-    );
+    // runner.signature = sign(runner);
+
+    return runner;
   });
 
   res.json(odds);
