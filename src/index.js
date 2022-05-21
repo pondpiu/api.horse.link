@@ -59,7 +59,7 @@ app.get("/", (req, res) => {
   res.send(`Hello World ${today}`);
 });
 
-app.get("/pools", async (req, res) => {
+app.get("/vaults", async (req, res) => {
   // todo
 });
 
