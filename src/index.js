@@ -83,8 +83,10 @@ app.get("/odds/:track/:race/win", async (req, res) => {
 
   const market_id = crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
 
-  const response = await axios(config);
-  let odds = response.data.runners.map(item => {
+  const result = await axios(config);
+  let response = {};
+
+  let odds = result.data.runners.map(item => {
     const runner = {};
     runner.id = item.runnerNumber;
     runner.nonce = crypto.randomUUID();
@@ -97,7 +99,9 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     return runner;
   });
 
-  res.json(odds);
+  response.odds = odds;
+
+  res.json(response);
 });
 
 //
@@ -105,16 +109,16 @@ app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
   if (!meetings) {
     const today = getToday();
-    const meetings = await getMeetings(today);
+    const result = await getMeetings(today);
 
-    cache.put("meetings", meetings, 1000 * 60);
-    console.log(meetings);
+    cache.put("meetings", result, 1000 * 60);
+    console.log(result);
   }
 
   const now = moment().unix();
 
   // https://eips.ethereum.org/EIPS/eip-191
-  const meetings_response = {
+  const response = {
     id: crypto.randomUUID(),
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     created: now,
@@ -122,7 +126,7 @@ app.get("/meetings", async (req, res) => {
     meetings: cache.get("meetings")
   };
 
-  res.json(meetings_response);
+  res.json(response);
 });
 
 //
