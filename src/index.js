@@ -94,6 +94,7 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     runner.start = 0;
     runner.end = 0;
     runner.odds = item.fixedOdds.returnWin * 100;
+    runner.proposition_id = crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
     // runner.signature = sign(runner);
 
     return runner;
