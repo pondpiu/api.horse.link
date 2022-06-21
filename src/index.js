@@ -81,7 +81,8 @@ app.get("/odds/:track/:race/win", async (req, res) => {
 
   // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
-  const market_id = crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
+  // no need to hash
+  const market_id = `{$today}-${track}-${race}`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
 
   const result = await axios(config);
   let response = {};
@@ -94,7 +95,7 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     runner.start = 0;
     runner.end = 0;
     runner.odds = item.fixedOdds.returnWin * 100;
-    runner.proposition_id = crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
+    runner.proposition_id = item.runnerNumber; //crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
     // runner.signature = sign(runner);
 
     return runner;
