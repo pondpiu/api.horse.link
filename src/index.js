@@ -34,7 +34,7 @@ const getMeetings = async (date) => {
 
   const meetings = response.data.meetings.map(item => {
     const meeting = {};
-    meeting.id = item.venueMnemonict; //;
+    meeting.id = item.venueMnemonic; //;
     meeting.name = item.meetingName; //.toUpperCase();
     meeting.location = item.location; //.toUpperCase();
     meeting.date = item.meetingDate;
@@ -47,7 +47,7 @@ const getMeetings = async (date) => {
 
 const sign = (payload) => {
   // rally gas shield once will april foster fly direct frame actress tone
-  const private_key = process.env.PRIVATE_KEY; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
+  const private_key = process.env.PRIVATE_KEY || "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed"; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
   const ethAccounts = new accounts();
   const signature = ethAccounts.sign(payload, private_key);
 
@@ -56,7 +56,10 @@ const sign = (payload) => {
 
 app.get("/", (req, res) => {
   const today = getToday();
-  res.send(`Hello World ${today}`);
+  const message = `Hello World ${today}`;
+  const signature = sign(message);
+  console.log(signature);
+  res.send(`${message} ${signature.signature}`);
 });
 
 app.get("/vaults", async (req, res) => {
@@ -82,7 +85,7 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
   // no need to hash
-  const market_id = `{$today}-${track}-${race}`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
+  const market_id = `{$today}-${track}-${race}-w`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
 
   const result = await axios(config);
   let response = {};
