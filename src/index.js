@@ -85,27 +85,34 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
   // no need to hash
-  const market_id = `{$today}-${track}-${race}-w`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
+  const market_id = `${today}-${track}-${race}-w`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
 
   const result = await axios(config);
+  const nonce = crypto.randomUUID();
+  const close = 0;
+  const end = 0;
+
   let response = {};
 
   let odds = result.data.runners.map(item => {
+
+    const odds = item.fixedOdds.returnWin * 1000;
+
     const runner = {};
     runner.id = item.runnerNumber;
-    runner.nonce = crypto.randomUUID();
+    runner.nonce = nonce;
     runner.market_id = market_id;
-    runner.start = 0;
-    runner.end = 0;
-    runner.odds = item.fixedOdds.returnWin * 100;
+    runner.close = close;
+    runner.end = end;
+    runner.odds = odds; // todo: get precision from contract
     runner.proposition_id = item.runnerNumber; //crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
-    // runner.signature = sign(runner);
+    // runner.signature = sign(`nonce, propositionId, marketId, wager, odds, close, end`);
+    runner.signature = sign(`${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`);
 
     return runner;
   });
 
   response.odds = odds;
-
   res.json(response);
 });
 
@@ -123,12 +130,20 @@ app.get("/meetings", async (req, res) => {
   const now = moment().unix();
 
   // https://eips.ethereum.org/EIPS/eip-191
-  const response = {
+  const meetings_response = {
     id: crypto.randomUUID(),
     owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
+  };
+
+  const signature = sign(meetings_response);
+
+  const response = {
+    data: meetings_response,
+    signature: signature.signature,
+    hash: signature.hash
   };
 
   res.json(response);
@@ -160,7 +175,7 @@ app.get("/meetings/:date", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
-    data : meetings_response,
+    data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
   };
