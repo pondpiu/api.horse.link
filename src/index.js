@@ -34,9 +34,9 @@ const getMeetings = async (date) => {
 
   const meetings = response.data.meetings.map(item => {
     const meeting = {};
-    meeting.id = item.venueMnemonic.toUpperCase();
-    meeting.name = item.meetingName.toUpperCase();
-    meeting.location = item.location.toUpperCase();
+    meeting.id = item.venueMnemonict; //;
+    meeting.name = item.meetingName; //.toUpperCase();
+    meeting.location = item.location; //.toUpperCase();
     meeting.date = item.meetingDate;
 
     return meeting;
@@ -122,7 +122,7 @@ app.get("/meetings", async (req, res) => {
   // https://eips.ethereum.org/EIPS/eip-191
   const response = {
     id: crypto.randomUUID(),
-    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
+    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -172,7 +172,9 @@ app.post("/faucet", async (req, res) => {
   const abi = ["function transfer(uint256 amount, address to)"];
 
   const provider = ethers.getDefaultProvider();
-  const contractAddress = "0x1Ab87d843E31248e0e094dc7444A40048ee01FB7";
+
+  // Mock USDT
+  const contractAddress = "0x7bE6C2E9ed27143683EB92b569861aFB559C5a041";
   const contract = new ethers.Contract(contractAddress, abi, provider);
 
   const privateKey = process.env.PRIVATE_KEY;
