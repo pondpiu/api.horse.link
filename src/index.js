@@ -131,8 +131,7 @@ app.get("/meetings", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    id: crypto.randomUUID(),
-    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
+    nonce: crypto.randomUUID(),
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -141,6 +140,7 @@ app.get("/meetings", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
+    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
@@ -162,8 +162,7 @@ app.get("/meetings/:date", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    id: crypto.randomUUID(),
-    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
+    nonce: crypto.randomUUID(),
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -175,6 +174,7 @@ app.get("/meetings/:date", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
+    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
