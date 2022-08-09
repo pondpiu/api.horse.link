@@ -34,9 +34,9 @@ const getMeetings = async (date) => {
 
   const meetings = response.data.meetings.map(item => {
     const meeting = {};
-    meeting.id = item.venueMnemonic; //;
-    meeting.name = item.meetingName; //.toUpperCase();
-    meeting.location = item.location; //.toUpperCase();
+    meeting.id = item.venueMnemonic ?? "";
+    meeting.name = item.meetingName.toUpperCase();
+    meeting.location = item.location.toUpperCase();
     meeting.date = item.meetingDate;
 
     return meeting;
