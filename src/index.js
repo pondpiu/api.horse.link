@@ -141,7 +141,7 @@ app.get("/meetings", async (req, res) => {
 
   const response = {
     owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
-    meetings: meetings_response,
+    data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
   };
@@ -175,7 +175,7 @@ app.get("/meetings/:date", async (req, res) => {
 
   const response = {
     owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
-    meetings: meetings_response,
+    data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
   };
