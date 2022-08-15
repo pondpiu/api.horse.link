@@ -23,7 +23,7 @@ const getToday = () => {
   return moment(today).format("YYYY-MM-DD");
 };
 
-const getMeetings = async (date) => {
+const getMeetings = async date => {
   const config = {
     method: "get",
     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings?jurisdiction=QLD&returnOffers=true&returnPromo=false`,
@@ -32,27 +32,56 @@ const getMeetings = async (date) => {
 
   const response = await axios(config);
 
-  const meetings = response.data.meetings.map(item => {
+  const meetings = response.data.meetings.map(meet => {
     const meeting = {};
-    meeting.id = item.venueMnemonic; //;
-    meeting.name = item.meetingName; //.toUpperCase();
-    meeting.location = item.location; //.toUpperCase();
-    meeting.date = item.meetingDate;
+    meeting.id = meet.venueMnemonic; //;
+    meeting.name = meet.meetingName; //.toUpperCase();
+    meeting.location = meet.location; //.toUpperCase();
+    meeting.date = meet.meetingDate;
+    meeting.races = meet.races.map(r => {
+      const race = {};
+      race.number = r.raceNumber;
+      race.name = r.raceName.toUpperCase();
+
+      return race;
+    });
 
     return meeting;
   });
 
+  // for (let i = 0; i < meetings.length; i++) {
+  //   const venueMnemonic = meetings[i].id;
+  //   const races_config = {
+  //     method: "get",
+  //     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings/R/${venueMnemonic}/races/?jurisdiction=NSW`,
+  //     headers: {}
+  //   };
+
+  //   const races_response = await axios(races_config);
+  //   for (let j = 0; j < 1; j++) {
+  //     const race = {
+  //       number: races_response[i]?.raceNumber,
+  //       name: races_response[i]?.raceName,
+  //       results: races_response[i]?.results
+  //     }
+
+  //     meetings.races.push(race);
+  //   }
+  // }
+
   return meetings;
 };
 
-const sign = (payload) => {
+const sign = payload => {
   // rally gas shield once will april foster fly direct frame actress tone
-  const private_key = process.env.PRIVATE_KEY || "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed"; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
+  const private_key =
+    process.env.PRIVATE_KEY ||
+    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed"; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
   const ethAccounts = new accounts();
   const signature = ethAccounts.sign(payload, private_key);
 
   return signature;
-}
+};
 
 app.get("/", (req, res) => {
   const today = getToday();
@@ -95,7 +124,6 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   let response = {};
 
   let odds = result.data.runners.map(item => {
-
     const odds = item.fixedOdds.returnWin * 1000;
 
     const runner = {};
@@ -107,7 +135,9 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     runner.odds = odds; // todo: get precision from contract
     runner.proposition_id = item.runnerNumber; //crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
     // runner.signature = sign(`nonce, propositionId, marketId, wager, odds, close, end`);
-    runner.signature = sign(`${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`);
+    runner.signature = sign(
+      `${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`
+    );
 
     return runner;
   });
@@ -124,7 +154,7 @@ app.get("/meetings", async (req, res) => {
     const result = await getMeetings(today);
 
     cache.put("meetings", result, 1000 * 60);
-    console.log(result);
+    // console.log(result);
   }
 
   const now = moment().unix();
@@ -156,7 +186,7 @@ app.get("/meetings/:date", async (req, res) => {
   const meetings = getMeetings(req.params.date);
 
   cache.put("meetings", meetings, 1000 * 60 * 60);
-  console.log(meetings);
+  // console.log(meetings);
 
   const now = moment().unix();
 
