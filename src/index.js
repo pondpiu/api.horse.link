@@ -42,6 +42,7 @@ const getMeetings = async date => {
       const race = {};
       race.number = r.raceNumber;
       race.name = r.raceName.toUpperCase();
+      race.start = r.raceStartTime;
 
       return race;
     });
