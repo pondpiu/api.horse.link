@@ -12,6 +12,7 @@ const cache = require("memory-cache");
 const axios = require("axios");
 
 const app = express();
+app.use(express.json());
 app.use(cors());
 const PORT = process.env.PORT || 3000;
 
@@ -225,6 +226,7 @@ app.get("/meetings/:date", async (req, res) => {
 });
 
 app.post("/faucet", async (req, res) => {
+  console.log(req.body);
   const to = req.body.to;
   const amount = req.body.amount;
 
@@ -233,7 +235,7 @@ app.post("/faucet", async (req, res) => {
   const provider = ethers.getDefaultProvider();
 
   // Mock USDT
-  const contractAddress = "0x7bE6C2E9ed27143683EB92b569861aFB559C5a041";
+  const contractAddress = "0xCB0B538b0D5a69a7649B834e2dB959F80fC746c2";
   const contract = new ethers.Contract(contractAddress, abi, provider);
 
   const privateKey = process.env.PRIVATE_KEY;
@@ -243,7 +245,7 @@ app.post("/faucet", async (req, res) => {
   const tx = await contractWithSigner.transfer(amount, to);
 
   console.log(tx.hash);
-  res.json({ tx: tx.hash });
+  res.json({ tx: tx.data });
 });
 
 app.listen(PORT, err => {
