@@ -15,6 +15,17 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 3000;
 
+const sign = payload => {
+  // rally gas shield once will april foster fly direct frame actress tone
+  const private_key =
+    process.env.PRIVATE_KEY ||
+    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+  const ethAccounts = new accounts();
+  const signature = ethAccounts.sign(payload, private_key);
+
+  return signature;
+};
+
 const getToday = () => {
   const today = new Date().toLocaleString("en-US", {
     timeZone: "Australia/Brisbane"
@@ -73,17 +84,6 @@ const getMeetings = async date => {
   return meetings;
 };
 
-const sign = payload => {
-  // rally gas shield once will april foster fly direct frame actress tone
-  const private_key =
-    process.env.PRIVATE_KEY ||
-    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed"; // "0x29d6dec1a1698e7190a24c42d1a104d1d773eadf680d5d353cf15c3129aab729"; //
-  const ethAccounts = new accounts();
-  const signature = ethAccounts.sign(payload, private_key);
-
-  return signature;
-};
-
 app.get("/", (req, res) => {
   const today = getToday();
   const message = `Hello World ${today}`;
@@ -97,13 +97,14 @@ app.get("/vaults", async (req, res) => {
 });
 
 //
-app.get("/odds/:track/:race/win", async (req, res) => {
+app.get("/runners/:track/:race/win", async (req, res) => {
   const today = getToday();
 
   const track = req.params.track;
   const race = req.params.race;
 
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
+  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
   const config = {
     method: "get",
     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
@@ -122,20 +123,21 @@ app.get("/odds/:track/:race/win", async (req, res) => {
   const close = 0;
   const end = 0;
 
-  let response = {};
-
-  let odds = result.data.runners.map(item => {
+  const runners = result.data.runners.map(item => {
     const odds = item.fixedOdds.returnWin * 1000;
 
     const runner = {};
-    runner.id = item.runnerNumber;
     runner.nonce = nonce;
+    runner.number = item.runnerNumber;
+    runner.name = item.runnerName.toUpperCase();
     runner.market_id = market_id;
     runner.close = close;
     runner.end = end;
     runner.odds = odds; // todo: get precision from contract
-    runner.proposition_id = item.runnerNumber; //crypto.createHash("sha256").update(`${today}-${track}-${race}-w${item.runnerNumber}`).digets("hex");
-    // runner.signature = sign(`nonce, propositionId, marketId, wager, odds, close, end`);
+    runner.proposition_id = `${today}-${track}-${race}-w${item.runnerNumber}`; // .digets("hex");
+    
+    runner.barrier = item.barrierNumber;
+
     runner.signature = sign(
       `${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`
     );
@@ -143,7 +145,15 @@ app.get("/odds/:track/:race/win", async (req, res) => {
     return runner;
   });
 
-  response.odds = odds;
+  // const signature = sign(runners);
+
+  const response = {
+    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
+    data: runners,
+    signature: "", // signature.signature,
+    hash: "", //signature.hash
+  };
+
   res.json(response);
 });
 
