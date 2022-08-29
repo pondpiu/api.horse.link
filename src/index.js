@@ -231,8 +231,7 @@ app.post("/faucet", async (req, res) => {
   const amount = req.body.amount;
 
   const abi = ["function transfer(uint256 amount, address to)"];
-
-  const provider = ethers.getDefaultProvider();
+  const provider = new ethers.providers.JsonRpcProvider("https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"); //process.env.NODE
 
   // Mock USDT
   const contractAddress = "0xCB0B538b0D5a69a7649B834e2dB959F80fC746c2";
