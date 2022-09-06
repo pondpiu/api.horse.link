@@ -14,6 +14,7 @@ const axios = require("axios");
 const app = express();
 app.use(express.json());
 app.use(cors());
+
 const PORT = process.env.PORT || 3000;
 
 const sign = payload => {
@@ -136,7 +137,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
     runner.end = end;
     runner.odds = odds; // todo: get precision from contract
     runner.proposition_id = `${today}-${track}-${race}-w${item.runnerNumber}`; // .digets("hex");
-    
+
     runner.barrier = item.barrierNumber;
 
     runner.signature = sign(
@@ -152,7 +153,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
     owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
     data: runners,
     signature: "", // signature.signature,
-    hash: "", //signature.hash
+    hash: "" //signature.hash
   };
 
   res.json(response);
@@ -182,7 +183,7 @@ app.get("/meetings", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
-    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
+    owner: "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814",
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
@@ -216,7 +217,7 @@ app.get("/meetings/:date", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
-    owner: "0xeC8bB1C25679A2A3B3a276a623Bbc0D9B50D5C2b",
+    owner: "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814",
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
@@ -225,23 +226,42 @@ app.get("/meetings/:date", async (req, res) => {
   res.json(response);
 });
 
+app.get("/faucet", async (req, res) => {
+  const provider = new ethers.providers.JsonRpcProvider(
+    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
+  );
+
+  // const provider = new ethers.providers.JsonRpcProvider(process.env.NODE);
+
+  // Mock USDT
+  const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
+  const contract = new ethers.Contract(contractAddress, erc20, provider);
+
+  const owner = "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814";
+  const result = await contract.balanceOf(owner);
+
+  res.json({ result });
+});
+
 app.post("/faucet", async (req, res) => {
   console.log(req.body);
   const to = req.body.to;
   const amount = req.body.amount;
 
-  const abi = ["function transfer(uint256 amount, address to)"];
-  const provider = new ethers.providers.JsonRpcProvider("https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"); //process.env.NODE
+  const abi = ["function transfer(address to, uint256 amount)"];
+  const provider = new ethers.providers.JsonRpcProvider(
+    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
+  ); //process.env.NODE
 
   // Mock USDT
-  const contractAddress = "0xCB0B538b0D5a69a7649B834e2dB959F80fC746c2";
+  const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
   const contract = new ethers.Contract(contractAddress, abi, provider);
 
   const privateKey = process.env.PRIVATE_KEY;
   const wallet = new ethers.Wallet(privateKey, provider);
 
   const contractWithSigner = contract.connect(wallet);
-  const tx = await contractWithSigner.transfer(amount, to);
+  const tx = await contractWithSigner.transfer(to, amount);
 
   console.log(tx.hash);
   res.json({ tx: tx.data });
