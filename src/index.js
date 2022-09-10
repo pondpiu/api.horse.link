@@ -63,26 +63,6 @@ const getMeetings = async date => {
     return meeting;
   });
 
-  // for (let i = 0; i < meetings.length; i++) {
-  //   const venueMnemonic = meetings[i].id;
-  //   const races_config = {
-  //     method: "get",
-  //     url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${date}/meetings/R/${venueMnemonic}/races/?jurisdiction=NSW`,
-  //     headers: {}
-  //   };
-
-  //   const races_response = await axios(races_config);
-  //   for (let j = 0; j < 1; j++) {
-  //     const race = {
-  //       number: races_response[i]?.raceNumber,
-  //       name: races_response[i]?.raceName,
-  //       results: races_response[i]?.results
-  //     }
-
-  //     meetings.races.push(race);
-  //   }
-  // }
-
   return meetings;
 };
 
@@ -100,63 +80,69 @@ app.get("/vaults", async (req, res) => {
 
 //
 app.get("/runners/:track/:race/win", async (req, res) => {
-  const today = getToday();
-
-  const track = req.params.track;
-  const race = req.params.race;
-
-  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
-  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
-  const config = {
-    method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
-    headers: {}
-  };
-
-  console.log(config);
-
-  // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
-
   // no need to hash
-  const market_id = `${today}-${track}-${race}-w`; // crypto.createHash("sha256").update(`${today}-${track}-${race}-w`).digest("hex");
+  const market_id = `${today}-${track}-${race}-w`;
+  const cached_runners = await cache.get(market_id);
+  let runners;
 
-  const result = await axios(config);
-  const nonce = crypto.randomUUID();
-  const close = 0;
-  const end = 0;
+  if (!cached_runners) {
+    const today = getToday();
 
-  const runners = result.data.runners.map(item => {
-    const odds = item.fixedOdds.returnWin * 1000;
+    const track = req.params.track;
+    const race = req.params.race;
 
-    const runner = {};
-    runner.nonce = nonce;
-    runner.number = item.runnerNumber;
-    runner.name = item.runnerName.toUpperCase();
-    runner.market_id = market_id;
-    runner.close = close;
-    runner.end = end;
-    runner.odds = odds; // todo: get precision from contract
-    runner.proposition_id = `${today}-${track}-${race}-w${item.runnerNumber}`; // .digets("hex");
+    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
+    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
+    const config = {
+      method: "get",
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
+      headers: {}
+    };
 
-    runner.barrier = item.barrierNumber;
+    console.log(config);
 
-    runner.signature = sign(
-      `${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`
-    );
+    // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
-    return runner;
-  });
+    const result = await axios(config);
+    const nonce = crypto.randomUUID();
+    const close = 0;
+    const end = 0;
+
+    runners = result.data.runners.map(item => {
+      const odds = item.fixedOdds.returnWin * 1000;
+
+      const runner = {};
+      runner.nonce = nonce;
+      runner.number = item.runnerNumber;
+      runner.name = item.runnerName.toUpperCase();
+      runner.market_id = market_id;
+      runner.close = close;
+      runner.end = end;
+      runner.odds = odds; // todo: get precision from contract
+      runner.proposition_id = `${today}-${track}-${race}-w${item.runnerNumber}`; // .digets("hex");
+
+      runner.barrier = item.barrierNumber;
+
+      runner.signature = sign(
+        `${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`
+      );
+
+      return runner;
+    });
+
+    cache.put(market_id, runners, 1000 * 60 * 60);
+  }
 
   // const signature = sign(runners);
 
-  const response = {
+  const runners_response = {
     owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
     data: runners,
     signature: "", // signature.signature,
     hash: "" //signature.hash
   };
 
-  res.json(response);
+  res.json(runners_response);
 });
 
 //
@@ -167,7 +153,6 @@ app.get("/meetings", async (req, res) => {
     const result = await getMeetings(today);
 
     cache.put("meetings", result, 1000 * 60);
-    // console.log(result);
   }
 
   const now = moment().unix();
@@ -197,9 +182,7 @@ app.get("/meetings/:date", async (req, res) => {
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-05-14/meetings?jurisdiction=QLD
 
   const meetings = getMeetings(req.params.date);
-
   cache.put("meetings", meetings, 1000 * 60 * 60);
-  // console.log(meetings);
 
   const now = moment().unix();
 
