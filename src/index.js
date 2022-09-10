@@ -95,7 +95,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/vaults", async (req, res) => {
-  // todo
+  // todo:  query repsoitory contracts
 });
 
 //
