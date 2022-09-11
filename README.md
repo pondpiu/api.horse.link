@@ -9,7 +9,7 @@ This project allows users to create a signed data to add to Horse Link dapps.
 The api returns market odds, along with other properities such as expiry and nonce.  Each subsequent request is resigned by the market owners key. 
 
 ## Market ID
-The market ID is an arbitary identify 
+The market ID is an arbitary identify.
 
 ## Starting
 

@@ -80,30 +80,30 @@ app.get("/vaults", async (req, res) => {
 
 //
 app.get("/runners/:track/:race/win", async (req, res) => {
-  // no need to hash
-  const market_id = `${today}-${track}-${race}-w`;
+  const today = getToday();
+
+  const track = req.params.track;
+  const race = req.params.race;
+
+  const market_id = `${today}-${track}-${race}-w`; // todo: change to prop id
   const cached_runners = await cache.get(market_id);
   let runners;
 
-  if (!cached_runners) {
-    const today = getToday();
-
-    const track = req.params.track;
-    const race = req.params.race;
-
+  // if (!cached_runners) {
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
+    
     const config = {
       method: "get",
       url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
       headers: {}
     };
 
-    console.log(config);
-
     // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
     const result = await axios(config);
+    // console.log(result);
+
     const nonce = crypto.randomUUID();
     const close = 0;
     const end = 0;
@@ -119,19 +119,19 @@ app.get("/runners/:track/:race/win", async (req, res) => {
       runner.close = close;
       runner.end = end;
       runner.odds = odds; // todo: get precision from contract
-      runner.proposition_id = `${today}-${track}-${race}-w${item.runnerNumber}`; // .digets("hex");
+      runner.proposition_id = `${market_id}${item.runnerNumber}`; // .digets("hex");
 
       runner.barrier = item.barrierNumber;
 
       runner.signature = sign(
-        `${nonce}${item.runnerNumber}${market_id}${odds}${close}${end}`
+        `${nonce}-${market_id}${item.runnerNumber}-${odds}-${close}-${end}`
       );
 
       return runner;
     });
 
     cache.put(market_id, runners, 1000 * 60 * 60);
-  }
+  //}
 
   // const signature = sign(runners);
 
