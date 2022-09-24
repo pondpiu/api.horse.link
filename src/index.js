@@ -16,6 +16,7 @@ app.use(express.json());
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
+const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
 
 const sign = payload => {
   // rally gas shield once will april foster fly direct frame actress tone
@@ -56,6 +57,8 @@ const getMeetings = async date => {
       race.number = r.raceNumber;
       race.name = r.raceName.toUpperCase();
       race.start = r.raceStartTime;
+      race.end = moment(r.raceStartTime).add(30, "minute");
+      race.close = moment(r.raceStartTime).add(-2, "minute");
 
       return race;
     });
@@ -70,7 +73,6 @@ app.get("/", (req, res) => {
   const today = getToday();
   const message = `Hello World ${today}`;
   const signature = sign(message);
-  console.log(signature);
   res.send(`${message} ${signature.signature}`);
 });
 
@@ -85,7 +87,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const track = req.params.track;
   const race = req.params.race;
 
-  const market_id = `${today}-${track}-${race}-w`; // todo: change to prop id
+  const market_id = `${today}-${track}-${race}-w`;
   const cached_runners = await cache.get(market_id);
   let runners;
 
@@ -102,7 +104,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
     // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
 
     const result = await axios(config);
-    // console.log(result);
+    console.log(config.url);
 
     const nonce = crypto.randomUUID();
     const close = 0;
@@ -136,7 +138,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   // const signature = sign(runners);
 
   const runners_response = {
-    owner: "0x155c21c846b68121ca59879B3CCB5194F5Ae115E",
+    owner: OWNER,
     data: runners,
     signature: "", // signature.signature,
     hash: "" //signature.hash
@@ -168,7 +170,7 @@ app.get("/meetings", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
-    owner: "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814",
+    owner: OWNER,
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
@@ -200,7 +202,7 @@ app.get("/meetings/:date", async (req, res) => {
   const signature = sign(meetings_response);
 
   const response = {
-    owner: "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814",
+    owner: OWNER,
     data: meetings_response,
     signature: signature.signature,
     hash: signature.hash
@@ -219,9 +221,7 @@ app.get("/faucet", async (req, res) => {
   // Mock USDT
   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
   const contract = new ethers.Contract(contractAddress, erc20, provider);
-
-  const owner = "0x1Ab4C6d9e25Fc65C917aFBEfB4E963C400Fb9814";
-  const result = await contract.balanceOf(owner);
+  const result = await contract.balanceOf(OWNER);
 
   res.json({ result });
 });
