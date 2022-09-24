@@ -51,14 +51,20 @@ const getMeetings = async date => {
     meeting.id = meet.venueMnemonic ?? "";
     meeting.name = meet.meetingName.toUpperCase();
     meeting.location = meet.location.toUpperCase();
-    meeting.date = meet.meetingDate;
+    meeting.date = moment(meet.meetingDate).format("YYYY-MM-DD");
     meeting.races = meet.races.map(r => {
+
+      const start = moment(r.raceStartTime);
+
       const race = {};
       race.number = r.raceNumber;
       race.name = r.raceName.toUpperCase();
-      race.start = r.raceStartTime;
-      race.end = moment(r.raceStartTime).add(30, "minute");
-      race.close = moment(r.raceStartTime).add(-2, "minute");
+      race.start = start;
+      race.start_unix = start.unix()
+      race.end = start.add(30, "minute");
+      race.end_unix = start.add(30, "minute").unix();
+      race.close = start.add(-2, "minute");
+      race.close_unix = start.add(-2, "minute").unix();
 
       return race;
     });
