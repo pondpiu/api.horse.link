@@ -83,7 +83,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/vaults", async (req, res) => {
-  // todo:  query repsoitory contracts
+  // todo:  query repository contracts
 });
 
 //
@@ -138,6 +138,8 @@ app.get("/runners/:track/:race/win", async (req, res) => {
       return runner;
     });
 
+    const sumOfOdds = runners.reduce((a, b) => a + b.odds, 0);
+
     cache.put(market_id, runners, 1000 * 60 * 60);
   //}
 
@@ -146,6 +148,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const runners_response = {
     owner: OWNER,
     data: runners,
+    sumOfOdds: sumOfOdds,
     signature: "", // signature.signature,
     hash: "" //signature.hash
   };
