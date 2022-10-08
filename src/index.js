@@ -162,7 +162,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
 app.get("/meetings", async (req, res) => {
   const meetings = await cache.get("meetings");
   if (!meetings) {
-    const today = getToday();
+    const today = getToday("YYYY-MM-DD");
     const result = await getMeetings(today);
 
     cache.put("meetings", result, 1000 * 60);
