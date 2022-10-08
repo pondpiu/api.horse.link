@@ -34,7 +34,7 @@ const getToday = (format) => {
     timeZone: "Australia/Brisbane"
   });
   moment.suppressDeprecationWarnings = true;
-  return moment(today).format(format);
+  return moment(today).format(format ?? "YYYY-MM-DD");
 };
 
 const getMeetings = async date => {
