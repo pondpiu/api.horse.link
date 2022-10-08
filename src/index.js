@@ -127,7 +127,8 @@ app.get("/runners/:track/:race/win", async (req, res) => {
       runner.close = close;
       runner.end = end;
       runner.odds = odds; // todo: get precision from contract
-      runner.proposition_id = `${market_id}${item.runnerNumber}`; // .digets("hex");
+      runner.proposition_id = `${market_id}${item.runnerNumber}`;
+      runner.proposition_id_hash = ethers.utils.keccak256(`${market_id}${item.runnerNumber}`);
 
       runner.barrier = item.barrierNumber;
 
