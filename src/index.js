@@ -29,12 +29,12 @@ const sign = payload => {
   return signature;
 };
 
-const getToday = () => {
+const getToday = (format) => {
   const today = new Date().toLocaleString("en-US", {
     timeZone: "Australia/Brisbane"
   });
   moment.suppressDeprecationWarnings = true;
-  return moment(today).format("YYYY-MM-DD");
+  return moment(today).format(format);
 };
 
 const getMeetings = async date => {
@@ -76,7 +76,7 @@ const getMeetings = async date => {
 };
 
 app.get("/", (req, res) => {
-  const today = getToday();
+  const today = getToday("YYYY-MM-DD");
   const message = `Hello World ${today}`;
   const signature = sign(message);
   res.send(`${message} ${signature.signature}`);
@@ -88,12 +88,13 @@ app.get("/vaults", async (req, res) => {
 
 //
 app.get("/runners/:track/:race/win", async (req, res) => {
-  const today = getToday();
+  const today = getToday("YYYY-MM-DD");
+  // const _today = getToday("YYYYMMDD");
 
   const track = req.params.track;
   const race = req.params.race;
 
-  const market_id = `${today}-${track}-${race}-w`;
+  const market_id = `${today}_${track}_${race}_W`;
   const cached_runners = await cache.get(market_id);
   let runners;
 
@@ -128,7 +129,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
       runner.end = end;
       runner.odds = odds; // todo: get precision from contract
       runner.proposition_id = `${market_id}${item.runnerNumber}`;
-      runner.proposition_id_hash = ethers.utils.keccak256(`${market_id}${item.runnerNumber}`);
+      runner.proposition_id_hash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`${market_id}${item.runnerNumber}`));
 
       runner.barrier = item.barrierNumber;
 
