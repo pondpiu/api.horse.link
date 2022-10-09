@@ -18,6 +18,12 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
 
+const getNonce = () => {
+  const nonce = crypto.randomUUID();
+  const _nonce = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(nonce));
+  return _nonce;
+};
+
 const sign = payload => {
   // rally gas shield once will april foster fly direct frame actress tone
   const private_key =
@@ -29,7 +35,7 @@ const sign = payload => {
   return signature;
 };
 
-const getToday = (format) => {
+const getToday = format => {
   const today = new Date().toLocaleString("en-US", {
     timeZone: "Australia/Brisbane"
   });
@@ -53,14 +59,13 @@ const getMeetings = async date => {
     meeting.location = meet.location.toUpperCase();
     meeting.date = moment(meet.meetingDate).format("YYYY-MM-DD");
     meeting.races = meet.races.map(r => {
-
       const start = moment(r.raceStartTime);
 
       const race = {};
       race.number = r.raceNumber;
       race.name = r.raceName.toUpperCase();
       race.start = start;
-      race.start_unix = start.unix()
+      race.start_unix = start.unix();
       race.end = start.add(30, "minute");
       race.end_unix = start.add(30, "minute").unix();
       race.close = start.add(-2, "minute");
@@ -89,7 +94,6 @@ app.get("/vaults", async (req, res) => {
 //
 app.get("/runners/:track/:race/win", async (req, res) => {
   const today = getToday("YYYY-MM-DD");
-  // const _today = getToday("YYYYMMDD");
 
   const track = req.params.track;
   const race = req.params.race;
@@ -99,53 +103,51 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   let runners;
 
   // if (!cached_runners) {
-    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
-    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
-    
-    const config = {
-      method: "get",
-      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
-      headers: {}
-    };
+  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
+  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
 
-    // bytes32 message = keccak256(abi.encodePacked(id, amount, odds, start, end));
+  const config = {
+    method: "get",
+    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
+    headers: {}
+  };
 
-    const result = await axios(config);
-    console.log(config.url);
+  const result = await axios(config);
+  console.log(config.url);
 
-    const nonce = crypto.randomUUID();
-    const close = 0;
-    const end = 0;
+  const nonce = getNonce();
+  const close = 0;
+  const end = 0;
 
-    runners = result.data.runners.map(item => {
-      const odds = item.fixedOdds.returnWin * 1000;
+  runners = result.data.runners.map(item => {
+    const odds = item.fixedOdds.returnWin * 1000;
 
-      const runner = {};
-      runner.nonce = nonce;
-      runner.number = item.runnerNumber;
-      runner.name = item.runnerName.toUpperCase();
-      runner.market_id = market_id;
-      runner.close = close;
-      runner.end = end;
-      runner.odds = odds; // todo: get precision from contract
-      runner.proposition_id = `${market_id}${item.runnerNumber}`;
-      runner.proposition_id_hash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`${market_id}${item.runnerNumber}`));
+    const runner = {};
+    runner.nonce = nonce;
+    runner.number = item.runnerNumber;
+    runner.name = item.runnerName.toUpperCase();
+    runner.market_id = market_id;
+    runner.close = close;
+    runner.end = end;
+    runner.odds = odds; // todo: get precision from contract
+    runner.proposition_id = `${market_id}${item.runnerNumber}`;
+    runner.proposition_id_hash = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes(`${market_id}${item.runnerNumber}`)
+    );
 
-      runner.barrier = item.barrierNumber;
+    runner.barrier = item.barrierNumber;
 
-      runner.signature = sign(
-        `${nonce}-${market_id}${item.runnerNumber}-${odds}-${close}-${end}`
-      );
+    runner.signature = sign(
+      `${nonce}-${market_id}${item.runnerNumber}-${odds}-${close}-${end}`
+    );
 
-      return runner;
-    });
+    return runner;
+  });
 
-    const sumOfOdds = runners.reduce((a, b) => a + b.odds, 0);
+  const sumOfOdds = runners.reduce((a, b) => a + b.odds, 0);
 
-    cache.put(market_id, runners, 1000 * 60 * 60);
+  cache.put(market_id, runners, 1000 * 60 * 60);
   //}
-
-  // const signature = sign(runners);
 
   const runners_response = {
     owner: OWNER,
@@ -172,7 +174,7 @@ app.get("/meetings", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    nonce: crypto.randomUUID(),
+    nonce: getNonce(),
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -201,7 +203,7 @@ app.get("/meetings/:date", async (req, res) => {
 
   // https://eips.ethereum.org/EIPS/eip-191
   const meetings_response = {
-    nonce: crypto.randomUUID(),
+    nonce: getNonce(),
     created: now,
     expires: now + 60 * 1000,
     meetings: cache.get("meetings")
@@ -222,20 +224,75 @@ app.get("/meetings/:date", async (req, res) => {
   res.json(response);
 });
 
-app.get("/faucet", async (req, res) => {
+app.get("/odds/:market", async (req, res) => {
+  // const provider = new ethers.providers.JsonRpcProvider(
+  //   process.env.NODE ||
+  //     "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
+  // );
+
   const provider = new ethers.providers.JsonRpcProvider(
-    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
+    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28",
+    5
   );
 
-  // const provider = new ethers.providers.JsonRpcProvider(process.env.NODE);
+  const abi = [
+    {
+      inputs: [
+        {
+          internalType: "int256",
+          name: "wager",
+          type: "int256"
+        },
+        {
+          internalType: "int256",
+          name: "odds",
+          type: "int256"
+        },
+        {
+          internalType: "bytes32",
+          name: "propositionId",
+          type: "bytes32"
+        }
+      ],
+      name: "getOdds",
+      outputs: [
+        {
+          internalType: "int256",
+          name: "",
+          type: "int256"
+        }
+      ],
+      stateMutability: "view",
+      type: "function"
+    }
+  ];
 
-  // Mock USDT
-  const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
-  const contract = new ethers.Contract(contractAddress, erc20, provider);
-  const result = await contract.balanceOf(OWNER);
+  const contractAddress = req.params.market;
+  const contract = new ethers.Contract(contractAddress, abi, provider);
+
+  const odds = ethers.BigNumber.from(req.query.odds);
+  const wager = ethers.BigNumber.from(req.query.wager);
+  const proposition_id = req.query.proposition_id_hash;
+
+  const result = await contract.getOdds(odds, wager, proposition_id);
 
   res.json({ result });
 });
+
+// app.get("/faucet", async (req, res) => {
+//   const provider = new ethers.providers.JsonRpcProvider(
+//     process.env.NODE || "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
+//   );
+
+//   // const provider = new ethers.providers.JsonRpcProvider(process.env.NODE);
+
+//   // Mock USDT
+//   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
+//   const contract = new ethers.Contract(contractAddress, erc20, provider);
+//   const result = await contract.balanceOf(OWNER);
+
+//   res.json({ result });
+// });
 
 app.post("/faucet", async (req, res) => {
   console.log(req.body);
