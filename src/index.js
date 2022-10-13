@@ -20,8 +20,8 @@ const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
 
 const getNonce = () => {
   const nonce = crypto.randomUUID();
-  const _nonce = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(nonce));
-  return _nonce;
+  // const _nonce = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(nonce));
+  return nonce;
 };
 
 const sign = payload => {
@@ -245,7 +245,6 @@ app.get("/vaults", async (req, res) => {
 
   for (let i = 0; i < Number(count) - 1; i++) {
     const vault = await contract.vaults(i);
-    // const market = await contract.markets(i);
     console.log(vault);
     response.push(vault);
   }
@@ -374,9 +373,6 @@ app.get("/meetings/:date", async (req, res) => {
     meetings: cache.get("meetings")
   };
 
-  // const hash = crypto.createHash("sha256", meetings_response);
-  // meetings_response.hash = hash.digest("hex");
-
   const signature = sign(meetings_response);
 
   const response = {
@@ -444,6 +440,12 @@ app.get("/odds/:market", async (req, res) => {
   res.json({ result });
 });
 
+app.get("/history", async (req, res) => {
+  const results = [{ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00" }];
+
+  res.json({ results });
+});
+
 // app.get("/faucet", async (req, res) => {
 //   const provider = new ethers.providers.JsonRpcProvider(
 //     process.env.NODE || "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
@@ -467,7 +469,7 @@ app.post("/faucet", async (req, res) => {
   const abi = ["function transfer(address to, uint256 amount)"];
   const provider = new ethers.providers.JsonRpcProvider(
     "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
-  ); //process.env.NODE
+  ); // process.env.NODE
 
   // Mock USDT
   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
