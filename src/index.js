@@ -98,6 +98,52 @@ app.get("/", (req, res) => {
   res.send(`${message} ${signature.signature}`);
 });
 
+const getMarkets = async (provider) => {
+  const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+  const contract = new ethers.Contract(contractAddress, registry_abi.abi, provider);
+
+  const count = await contract.marketCount();
+  const markets = [];
+
+  for (let i = 0; i < Number(count) - 1; i++) {
+    const market = await contract.markets(i);
+    markets.push(market);
+  }
+
+  return markets;
+};
+
+app.get("/markets", async (req, res) => {
+  const cached_markets = await cache.get("markets");
+  if (cached_markets) {
+    res.send(cached_markets);
+    return;
+  }
+
+  const response = await getMarkets(getProvider());
+
+  await cache.put("markets", response, 60 * 60 * 24);
+
+  res.send(response);
+  res.end();
+});
+
+const getVaults = async (provider) => {
+  const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+  const contract = new ethers.Contract(contractAddress, registry_abi.abi, provider);
+
+  const count = await contract.vaultCount();
+  const vaults = [];
+
+  for (let i = 0; i < Number(count) - 1; i++) {
+    const vault = await contract.vaults(i);
+    console.log(vault);
+    vaults.push(vault);
+  }
+
+  return vaults;
+};
+
 app.get("/vaults", async (req, res) => {
   const cached_vaults = await cache.get("vaults");
   if (cached_vaults) {
@@ -105,164 +151,10 @@ app.get("/vaults", async (req, res) => {
     return;
   }
 
-  const provider = new ethers.providers.JsonRpcProvider(
-    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28",
-    5
-  );
-
-  // const abi = [
-  //   {
-  //     anonymous: false,
-  //     inputs: [
-  //       {
-  //         indexed: true,
-  //         internalType: "address",
-  //         name: "market",
-  //         type: "address"
-  //       }
-  //     ],
-  //     name: "MarketAdded",
-  //     type: "event"
-  //   },
-  //   {
-  //     anonymous: false,
-  //     inputs: [
-  //       {
-  //         indexed: true,
-  //         internalType: "address",
-  //         name: "vault",
-  //         type: "address"
-  //       }
-  //     ],
-  //     name: "VaultAdded",
-  //     type: "event"
-  //   },
-  //   {
-  //     inputs: [
-  //       {
-  //         internalType: "uint256",
-  //         name: "",
-  //         type: "uint256"
-  //       }
-  //     ],
-  //     name: "markets",
-  //     outputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "",
-  //         type: "address"
-  //       }
-  //     ],
-  //     stateMutability: "view",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "",
-  //         type: "address"
-  //       }
-  //     ],
-  //     name: "underlying",
-  //     outputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "",
-  //         type: "address"
-  //       }
-  //     ],
-  //     stateMutability: "view",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [
-  //       {
-  //         internalType: "uint256",
-  //         name: "",
-  //         type: "uint256"
-  //       }
-  //     ],
-  //     name: "vaults",
-  //     outputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "",
-  //         type: "address"
-  //       }
-  //     ],
-  //     stateMutability: "view",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [],
-  //     name: "marketCount",
-  //     outputs: [
-  //       {
-  //         internalType: "uint256",
-  //         name: "",
-  //         type: "uint256"
-  //       }
-  //     ],
-  //     stateMutability: "view",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [],
-  //     name: "vaultCount",
-  //     outputs: [
-  //       {
-  //         internalType: "uint256",
-  //         name: "",
-  //         type: "uint256"
-  //       }
-  //     ],
-  //     stateMutability: "view",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "vault",
-  //         type: "address"
-  //       }
-  //     ],
-  //     name: "addVault",
-  //     outputs: [],
-  //     stateMutability: "nonpayable",
-  //     type: "function"
-  //   },
-  //   {
-  //     inputs: [
-  //       {
-  //         internalType: "address",
-  //         name: "market",
-  //         type: "address"
-  //       }
-  //     ],
-  //     name: "addMarket",
-  //     outputs: [],
-  //     stateMutability: "nonpayable",
-  //     type: "function"
-  //   }
-  // ];
-
-  const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
-  const contract = new ethers.Contract(contractAddress, registry_abi, provider);
-
-  const count = await contract.vaultCount();
-  const response = [];
-
-  for (let i = 0; i < Number(count) - 1; i++) {
-    const vault = await contract.vaults(i);
-    console.log(vault);
-    response.push(vault);
-  }
-
+  const response = await getVaults(getProvider());
   await cache.put("vaults", response, 60 * 60 * 24);
 
-  res.json(response);
+  res.send(response);
   res.end();
 });
 
