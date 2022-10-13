@@ -11,8 +11,8 @@ const ethers = require("ethers");
 const cache = require("memory-cache");
 const axios = require("axios");
 
-const market_abi = require("./abis/Market.json");
-const registry_abi = require("./abis/Registry.json");
+const market_abi = require("../abis/Market.json");
+const registry_abi = require("../abis/Registry.json");
 
 const app = express();
 app.use(express.json());
@@ -20,6 +20,14 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
+
+const getProvider = () => {
+  const provider = new ethers.providers.JsonRpcProvider(
+    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28",
+    5
+  );
+  return provider;
+};
 
 const getNonce = () => {
   const nonce = crypto.randomUUID();
@@ -389,50 +397,8 @@ app.get("/meetings/:date", async (req, res) => {
 });
 
 app.get("/odds/:market", async (req, res) => {
-  // const provider = new ethers.providers.JsonRpcProvider(
-  //   process.env.NODE ||
-  //     "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
-  // );
-
-  const provider = new ethers.providers.JsonRpcProvider(
-    "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28",
-    5
-  );
-
-  const abi = [
-    {
-      inputs: [
-        {
-          internalType: "int256",
-          name: "wager",
-          type: "int256"
-        },
-        {
-          internalType: "int256",
-          name: "odds",
-          type: "int256"
-        },
-        {
-          internalType: "bytes32",
-          name: "propositionId",
-          type: "bytes32"
-        }
-      ],
-      name: "getOdds",
-      outputs: [
-        {
-          internalType: "int256",
-          name: "",
-          type: "int256"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    }
-  ];
-
   const contractAddress = req.params.market;
-  const contract = new ethers.Contract(contractAddress, abi, provider);
+  const contract = new ethers.Contract(contractAddress, market_abi.abi, getProvider());
 
   const odds = ethers.BigNumber.from(req.query.odds);
   const wager = ethers.BigNumber.from(req.query.wager);
@@ -445,7 +411,7 @@ app.get("/odds/:market", async (req, res) => {
 
 app.get("/history", async (req, res) => {
   const contractAddress = "0xe9BC1f42bF75C59b245d39483E97C3A70c450c9b"; // dia market
-  const market = new ethers.Contract(contractAddress, abi, provider);
+  const market = new ethers.Contract(contractAddress, market_abi.abi, getProvider());
 
   // const market = await ethers.getContractAt("Market", contractAddress);
   const placedFilter = await market.filters.Placed();
