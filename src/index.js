@@ -11,6 +11,9 @@ const ethers = require("ethers");
 const cache = require("memory-cache");
 const axios = require("axios");
 
+const market_abi = require("./abis/Market.json");
+const registry_abi = require("./abis/Registry.json");
+
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -99,146 +102,146 @@ app.get("/vaults", async (req, res) => {
     5
   );
 
-  const abi = [
-    {
-      anonymous: false,
-      inputs: [
-        {
-          indexed: true,
-          internalType: "address",
-          name: "market",
-          type: "address"
-        }
-      ],
-      name: "MarketAdded",
-      type: "event"
-    },
-    {
-      anonymous: false,
-      inputs: [
-        {
-          indexed: true,
-          internalType: "address",
-          name: "vault",
-          type: "address"
-        }
-      ],
-      name: "VaultAdded",
-      type: "event"
-    },
-    {
-      inputs: [
-        {
-          internalType: "uint256",
-          name: "",
-          type: "uint256"
-        }
-      ],
-      name: "markets",
-      outputs: [
-        {
-          internalType: "address",
-          name: "",
-          type: "address"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    },
-    {
-      inputs: [
-        {
-          internalType: "address",
-          name: "",
-          type: "address"
-        }
-      ],
-      name: "underlying",
-      outputs: [
-        {
-          internalType: "address",
-          name: "",
-          type: "address"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    },
-    {
-      inputs: [
-        {
-          internalType: "uint256",
-          name: "",
-          type: "uint256"
-        }
-      ],
-      name: "vaults",
-      outputs: [
-        {
-          internalType: "address",
-          name: "",
-          type: "address"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    },
-    {
-      inputs: [],
-      name: "marketCount",
-      outputs: [
-        {
-          internalType: "uint256",
-          name: "",
-          type: "uint256"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    },
-    {
-      inputs: [],
-      name: "vaultCount",
-      outputs: [
-        {
-          internalType: "uint256",
-          name: "",
-          type: "uint256"
-        }
-      ],
-      stateMutability: "view",
-      type: "function"
-    },
-    {
-      inputs: [
-        {
-          internalType: "address",
-          name: "vault",
-          type: "address"
-        }
-      ],
-      name: "addVault",
-      outputs: [],
-      stateMutability: "nonpayable",
-      type: "function"
-    },
-    {
-      inputs: [
-        {
-          internalType: "address",
-          name: "market",
-          type: "address"
-        }
-      ],
-      name: "addMarket",
-      outputs: [],
-      stateMutability: "nonpayable",
-      type: "function"
-    }
-  ];
+  // const abi = [
+  //   {
+  //     anonymous: false,
+  //     inputs: [
+  //       {
+  //         indexed: true,
+  //         internalType: "address",
+  //         name: "market",
+  //         type: "address"
+  //       }
+  //     ],
+  //     name: "MarketAdded",
+  //     type: "event"
+  //   },
+  //   {
+  //     anonymous: false,
+  //     inputs: [
+  //       {
+  //         indexed: true,
+  //         internalType: "address",
+  //         name: "vault",
+  //         type: "address"
+  //       }
+  //     ],
+  //     name: "VaultAdded",
+  //     type: "event"
+  //   },
+  //   {
+  //     inputs: [
+  //       {
+  //         internalType: "uint256",
+  //         name: "",
+  //         type: "uint256"
+  //       }
+  //     ],
+  //     name: "markets",
+  //     outputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "",
+  //         type: "address"
+  //       }
+  //     ],
+  //     stateMutability: "view",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "",
+  //         type: "address"
+  //       }
+  //     ],
+  //     name: "underlying",
+  //     outputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "",
+  //         type: "address"
+  //       }
+  //     ],
+  //     stateMutability: "view",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [
+  //       {
+  //         internalType: "uint256",
+  //         name: "",
+  //         type: "uint256"
+  //       }
+  //     ],
+  //     name: "vaults",
+  //     outputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "",
+  //         type: "address"
+  //       }
+  //     ],
+  //     stateMutability: "view",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [],
+  //     name: "marketCount",
+  //     outputs: [
+  //       {
+  //         internalType: "uint256",
+  //         name: "",
+  //         type: "uint256"
+  //       }
+  //     ],
+  //     stateMutability: "view",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [],
+  //     name: "vaultCount",
+  //     outputs: [
+  //       {
+  //         internalType: "uint256",
+  //         name: "",
+  //         type: "uint256"
+  //       }
+  //     ],
+  //     stateMutability: "view",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "vault",
+  //         type: "address"
+  //       }
+  //     ],
+  //     name: "addVault",
+  //     outputs: [],
+  //     stateMutability: "nonpayable",
+  //     type: "function"
+  //   },
+  //   {
+  //     inputs: [
+  //       {
+  //         internalType: "address",
+  //         name: "market",
+  //         type: "address"
+  //       }
+  //     ],
+  //     name: "addMarket",
+  //     outputs: [],
+  //     stateMutability: "nonpayable",
+  //     type: "function"
+  //   }
+  // ];
 
   const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
-  const contract = new ethers.Contract(contractAddress, abi, provider);
+  const contract = new ethers.Contract(contractAddress, registry_abi, provider);
 
   const count = await contract.vaultCount();
   const response = [];
@@ -441,6 +444,18 @@ app.get("/odds/:market", async (req, res) => {
 });
 
 app.get("/history", async (req, res) => {
+  const contractAddress = "0xe9BC1f42bF75C59b245d39483E97C3A70c450c9b"; // dia market
+  const market = new ethers.Contract(contractAddress, abi, provider);
+
+  // const market = await ethers.getContractAt("Market", contractAddress);
+  const placedFilter = await market.filters.Placed();
+  const placedLogs = await market.queryFilter(placedFilter);
+
+  console.log(placedLogs);
+
+  //event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
+  // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
+
   const results = [{ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00" }];
 
   res.json({ results });
