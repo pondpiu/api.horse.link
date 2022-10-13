@@ -446,6 +446,12 @@ app.get("/history", async (req, res) => {
   res.json({ results });
 });
 
+app.get("/history/:account", async (req, res) => {
+  const results = [{ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00" }];
+
+  res.json({ results });
+});
+
 // app.get("/faucet", async (req, res) => {
 //   const provider = new ethers.providers.JsonRpcProvider(
 //     process.env.NODE || "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
