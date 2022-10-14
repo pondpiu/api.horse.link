@@ -181,9 +181,11 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const result = await axios(config);
   console.log(config.url);
 
+  const now = moment().unix();
+
   const nonce = getNonce();
   const close = 0;
-  const end = 0;
+  const end = now + 60 * 60 * 12; 
 
   runners = result.data.runners.map(item => {
     const odds = item.fixedOdds.returnWin * 1000;
