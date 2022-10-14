@@ -137,7 +137,6 @@ const getVaults = async (provider) => {
 
   for (let i = 0; i < Number(count) - 1; i++) {
     const vault = await contract.vaults(i);
-    console.log(vault);
     vaults.push(vault);
   }
 
@@ -302,19 +301,30 @@ app.get("/odds/:market", async (req, res) => {
 });
 
 app.get("/history", async (req, res) => {
-  const contractAddress = "0xe9BC1f42bF75C59b245d39483E97C3A70c450c9b"; // dia market
-  const market = new ethers.Contract(contractAddress, market_abi.abi, getProvider());
+  const provider = getProvider();
+  let markets = await cache.get("markets");
+  if (!markets) {
+    markets = await getMarkets(provider);
+    await cache.put("markets", markets, 60 * 60 * 24);
+  }
 
-  // const market = await ethers.getContractAt("Market", contractAddress);
-  const placedFilter = await market.filters.Placed();
-  const placedLogs = await market.queryFilter(placedFilter);
+  const results = [];
 
-  console.log(placedLogs);
+  for (let i = 0; i < markets.length; i++) {
+    const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-  //event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
+    // const market = await ethers.getContractAt("Market", contractAddress);
+    const placedFilter = await market.filters.Placed();
+    const placedLogs = await market.queryFilter(placedFilter);
+
+    console.log(placedLogs);
+
+    results.push({ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00", market: markets[i] });
+  }
+
+  // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
   // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
 
-  const results = [{ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00" }];
 
   res.json({ results });
 });
