@@ -340,6 +340,54 @@ app.get("/history/:account", async (req, res) => {
   res.json({ results });
 });
 
+app.get("/performance", async (req, res) => {
+  const provider = getProvider();
+  let markets = await cache.get("markets");
+  if (!markets) {
+    markets = await getMarkets(provider);
+    await cache.put("markets", markets, 60 * 60 * 24);
+  }
+
+  let performance = 0.0;
+
+  for (let i = 0; i < markets.length; i++) {
+    const market = new ethers.Contract(markets[i], market_abi.abi, provider);
+
+    const placedFilter = await market.filters.Placed();
+    const placedLogs = await market.queryFilter(placedFilter);
+
+    console.log(placedLogs[0]);
+
+    
+  }
+
+  // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
+  // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
+
+
+  // res.json({ 1 });
+});
+
+app.get("/inplay", async (req, res) => {
+  const provider = getProvider();
+  let markets = await cache.get("markets");
+  if (!markets) {
+    markets = await getMarkets(provider);
+    await cache.put("markets", markets, 60 * 60 * 24);
+  }
+
+  let total = 0.0;
+
+  for (let i = 0; i < markets.length; i++) {
+    const market = new ethers.Contract(markets[i], market_abi.abi, provider);
+
+    const inplay = await market.getTotalInplay(); // TOdo: change to getTotalInPlay
+    total += Number(inplay);
+  }
+
+  res.json({ total });
+});
+
 // app.get("/faucet", async (req, res) => {
 //   const provider = new ethers.providers.JsonRpcProvider(
 //     process.env.NODE || "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
