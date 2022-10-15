@@ -13,6 +13,7 @@ const axios = require("axios");
 
 const market_abi = require("../abis/Market.json");
 const registry_abi = require("../abis/Registry.json");
+const vault_abi = require("../abis/Vault.json");
 
 const app = express();
 app.use(express.json());
@@ -342,30 +343,22 @@ app.get("/history/:account", async (req, res) => {
 
 app.get("/performance", async (req, res) => {
   const provider = getProvider();
-  let markets = await cache.get("markets");
-  if (!markets) {
-    markets = await getMarkets(provider);
-    await cache.put("markets", markets, 60 * 60 * 24);
+  let vaults = await cache.get("vaults");
+  if (!vaults) {
+    vaults = await getVaults(provider);
+    await cache.put("vaults", vaults, 60 * 60 * 24);
   }
 
   let performance = 0.0;
 
-  for (let i = 0; i < markets.length; i++) {
-    const market = new ethers.Contract(markets[i], market_abi.abi, provider);
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
 
-    const placedFilter = await market.filters.Placed();
-    const placedLogs = await market.queryFilter(placedFilter);
-
-    console.log(placedLogs[0]);
-
-    
+    const _performance = await vault.getPerformance();
+    performance += Number(_performance);
   }
 
-  // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
-  // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
-
-
-  // res.json({ 1 });
+  res.json({ performance });
 });
 
 app.get("/inplay", async (req, res) => {
@@ -381,7 +374,7 @@ app.get("/inplay", async (req, res) => {
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-    const inplay = await market.getTotalInplay(); // TOdo: change to getTotalInPlay
+    const inplay = await market.getTotalInplay(); // Todo: change to getTotalInPlay
     total += Number(inplay);
   }
 
