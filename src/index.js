@@ -316,14 +316,10 @@ app.get("/history", async (req, res) => {
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-    // const market = await ethers.getContractAt("Market", contractAddress);
     const placedFilter = await market.filters.Placed();
     const placedLogs = await market.queryFilter(placedFilter);
 
-    console.log(placedLogs[0]);
-    // console.log(placedLogs[0].args);
-
-    const signature = sign(ethers.utils.arrayify("1"));
+    const signature = ""; // signMessage(ethers.utils.arrayify("1"));
 
     results.push({ index: 1, market_id: "1", proposition_id: placedLogs[0].args[0], punter: placedLogs[0].args[3], amount: placedLogs.amount, tx: placedLogs[0].transactionHash, market: markets[i], signature: signature.signature});
   }
