@@ -38,10 +38,7 @@ const getNonce = () => {
 };
 
 const sign = payload => {
-  // rally gas shield once will april foster fly direct frame actress tone
-  const private_key =
-    process.env.PRIVATE_KEY ||
-    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+  const private_key = process.env.PRIVATE_KEY;
   const ethAccounts = new accounts();
   const signature = ethAccounts.sign(payload, private_key);
 
@@ -49,10 +46,7 @@ const sign = payload => {
 };
 
 const signMessage = async message => {
-  // rally gas shield once will april foster fly direct frame actress tone
-  const private_key =
-    process.env.PRIVATE_KEY ||
-    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+  const private_key = process.env.PRIVATE_KEY;
 
   const wallet = new ethers.Wallet(private_key);
   const flatSig = await wallet.signMessage(message);
@@ -445,11 +439,13 @@ app.post("/faucet", async (req, res) => {
 
   // Mock USDT
   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
-  const contract = new ethers.Contract(contractAddress, erc_20_abi.abi, provider);
+  const contract = new ethers.Contract(
+    contractAddress,
+    erc_20_abi.abi,
+    provider
+  );
 
-  const private_key =
-  process.env.PRIVATE_KEY ||
-  "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+  const private_key = process.env.PRIVATE_KEY;
   const wallet = new ethers.Wallet(private_key, provider);
 
   const contractWithSigner = contract.connect(wallet);
