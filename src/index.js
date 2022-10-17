@@ -11,6 +11,7 @@ const ethers = require("ethers");
 const cache = require("memory-cache");
 const axios = require("axios");
 
+const erc_20_abi = require("./abi/erc20.json");
 const market_abi = require("../abis/Market.json");
 const registry_abi = require("../abis/Registry.json");
 const vault_abi = require("../abis/Vault.json");
@@ -435,18 +436,16 @@ app.get("/inplay", async (req, res) => {
 // });
 
 app.post("/faucet", async (req, res) => {
-  console.log(req.body);
   const to = req.body.to;
   const amount = req.body.amount;
 
-  const abi = ["function transfer(address to, uint256 amount)"];
   const provider = new ethers.providers.JsonRpcProvider(
     "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
   ); // process.env.NODE
 
   // Mock USDT
   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
-  const contract = new ethers.Contract(contractAddress, abi, provider);
+  const contract = new ethers.Contract(contractAddress, erc_20_abi.abi, provider);
 
   const privateKey = process.env.PRIVATE_KEY;
   const wallet = new ethers.Wallet(privateKey, provider);
