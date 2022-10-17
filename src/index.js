@@ -447,8 +447,10 @@ app.post("/faucet", async (req, res) => {
   const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
   const contract = new ethers.Contract(contractAddress, erc_20_abi.abi, provider);
 
-  const privateKey = process.env.PRIVATE_KEY;
-  const wallet = new ethers.Wallet(privateKey, provider);
+  const private_key =
+  process.env.PRIVATE_KEY ||
+  "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+  const wallet = new ethers.Wallet(private_key, provider);
 
   const contractWithSigner = contract.connect(wallet);
   const tx = await contractWithSigner.transfer(to, amount);
