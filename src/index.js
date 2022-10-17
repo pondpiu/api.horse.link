@@ -454,7 +454,7 @@ app.post("/faucet", async (req, res) => {
   const tx = await contractWithSigner.transfer(to, amount);
 
   console.log(tx.hash);
-  res.json({ tx: tx.data });
+  res.json({ tx: tx.hash });
 });
 
 app.listen(PORT, err => {
