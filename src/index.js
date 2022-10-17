@@ -47,6 +47,17 @@ const sign = payload => {
   return signature;
 };
 
+const signMessage = async message => {
+  // rally gas shield once will april foster fly direct frame actress tone
+  const private_key =
+    process.env.PRIVATE_KEY ||
+    "0x22e5afcae8c823e7de74db1bf38684f56b7290c8a107473d4f3f8a967fd52eed";
+
+  const wallet = new ethers.Wallet(private_key);
+  const flatSig = await wallet.signMessage(message);
+  return flatSig;
+};
+
 const getToday = format => {
   const today = new Date().toLocaleString("en-US", {
     timeZone: "Australia/Brisbane"
@@ -99,9 +110,13 @@ app.get("/", (req, res) => {
   res.send(`${message} ${signature.signature}`);
 });
 
-const getMarkets = async (provider) => {
+const getMarkets = async provider => {
   const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
-  const contract = new ethers.Contract(contractAddress, registry_abi.abi, provider);
+  const contract = new ethers.Contract(
+    contractAddress,
+    registry_abi.abi,
+    provider
+  );
 
   const count = await contract.marketCount();
   const markets = [];
@@ -129,9 +144,13 @@ app.get("/markets", async (req, res) => {
   res.end();
 });
 
-const getVaults = async (provider) => {
+const getVaults = async provider => {
   const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
-  const contract = new ethers.Contract(contractAddress, registry_abi.abi, provider);
+  const contract = new ethers.Contract(
+    contractAddress,
+    registry_abi.abi,
+    provider
+  );
 
   const count = await contract.vaultCount();
   const vaults = [];
@@ -186,7 +205,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
 
   const nonce = getNonce();
   const close = 0;
-  const end = now + 60 * 60 * 12; 
+  const end = now + 60 * 60 * 12;
 
   runners = result.data.runners.map(item => {
     const odds = item.fixedOdds.returnWin * 1000;
@@ -292,7 +311,11 @@ app.get("/meetings/:date", async (req, res) => {
 
 app.get("/odds/:market", async (req, res) => {
   const contractAddress = req.params.market;
-  const contract = new ethers.Contract(contractAddress, market_abi.abi, getProvider());
+  const contract = new ethers.Contract(
+    contractAddress,
+    market_abi.abi,
+    getProvider()
+  );
 
   const odds = ethers.BigNumber.from(req.query.odds);
   const wager = ethers.BigNumber.from(req.query.wager);
@@ -319,20 +342,39 @@ app.get("/history", async (req, res) => {
     const placedFilter = await market.filters.Placed();
     const placedLogs = await market.queryFilter(placedFilter);
 
-    const signature = ""; // signMessage(ethers.utils.arrayify("1"));
+    const signature = await signMessage(placedLogs[i].args[0]);
+    console.log(signature);
 
-    results.push({ index: 1, market_id: "1", proposition_id: placedLogs[0].args[0], punter: placedLogs[0].args[3], amount: placedLogs.amount, tx: placedLogs[0].transactionHash, market: markets[i], signature: signature});
+    results.push({
+      index: i,
+      market_id: "1",
+      proposition_id: placedLogs[0].args[0],
+      punter: placedLogs[0].args[3],
+      amount: placedLogs.amount,
+      tx: placedLogs[0].transactionHash,
+      market: markets[i],
+      signature: signature
+    });
   }
 
   // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
   // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
 
-
   res.json({ results });
 });
 
 app.get("/history/:account", async (req, res) => {
-  const results = [{ market_id: "1", proposition_id: "1", punter: "0x00", amount: 100, odds: 2.0, result: "win", tx: "0x00" }];
+  const results = [
+    {
+      market_id: "1",
+      proposition_id: "1",
+      punter: "0x00",
+      amount: 100,
+      odds: 2.0,
+      result: "win",
+      tx: "0x00"
+    }
+  ];
 
   res.json({ results });
 });
