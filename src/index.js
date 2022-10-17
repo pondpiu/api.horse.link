@@ -321,7 +321,7 @@ app.get("/history", async (req, res) => {
 
     const signature = ""; // signMessage(ethers.utils.arrayify("1"));
 
-    results.push({ index: 1, market_id: "1", proposition_id: placedLogs[0].args[0], punter: placedLogs[0].args[3], amount: placedLogs.amount, tx: placedLogs[0].transactionHash, market: markets[i], signature: signature.signature});
+    results.push({ index: 1, market_id: "1", proposition_id: placedLogs[0].args[0], punter: placedLogs[0].args[3], amount: placedLogs.amount, tx: placedLogs[0].transactionHash, market: markets[i], signature: signature});
   }
 
   // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
