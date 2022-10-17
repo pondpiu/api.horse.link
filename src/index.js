@@ -11,7 +11,7 @@ const ethers = require("ethers");
 const cache = require("memory-cache");
 const axios = require("axios");
 
-const erc_20_abi = require("./abi/erc20.json");
+const erc_20_abi = require("../abis/ERC20.json");
 const market_abi = require("../abis/Market.json");
 const registry_abi = require("../abis/Registry.json");
 const vault_abi = require("../abis/Vault.json");
