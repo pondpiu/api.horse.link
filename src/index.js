@@ -438,14 +438,15 @@ app.post("/faucet", async (req, res) => {
   ); // process.env.NODE
 
   // Mock USDT
-  const contractAddress = "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
+  const address = req.body.address || "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
   const contract = new ethers.Contract(
-    contractAddress,
+    address,
     erc_20_abi.abi,
     provider
   );
 
-  const private_key = process.env.PRIVATE_KEY;
+  const private_key = process.env.FAUCET_PRIVATE_KEY;
+  console.log(private_key);
   const wallet = new ethers.Wallet(private_key, provider);
 
   const contractWithSigner = contract.connect(wallet);
