@@ -438,7 +438,7 @@ app.post("/faucet", async (req, res) => {
   ); // process.env.NODE
 
   // Mock USDT
-  const address = req.body.address || "0x8C819De7999D903bD86D6B3bdf46c1E1a1D0F8A7";
+  const address = req.body.address || "0xaF2929Ed6758B0bD9575e1F287b85953B08E50BC";
   const contract = new ethers.Contract(
     address,
     erc_20_abi.abi,
