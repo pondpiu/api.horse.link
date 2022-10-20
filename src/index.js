@@ -374,7 +374,7 @@ app.get("/history/:account", async (req, res) => {
   res.json({ results });
 });
 
-app.get("/performance", async (req, res) => {
+app.get("/vaults/performance", async (req, res) => {
   const provider = getProvider();
   let vaults = await cache.get("vaults");
   if (!vaults) {
@@ -392,6 +392,46 @@ app.get("/performance", async (req, res) => {
   }
 
   res.json({ performance });
+});
+
+app.get("/vault/:id/performance", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await cache.get("vaults");
+  if (!vaults) {
+    vaults = await getVaults(provider);
+    await cache.put("vaults", vaults, 60 * 60 * 24);
+  }
+
+  let performance = 0.0;
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _performance = await vault.getPerformance();
+    performance += Number(_performance);
+  }
+
+  res.json({ performance });
+});
+
+app.get("/vaults/liquidity", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await cache.get("vaults");
+  if (!vaults) {
+    vaults = await getVaults(provider);
+    await cache.put("vaults", vaults, 60 * 60 * 24);
+  }
+
+  let assets = 0.0;
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _assets = await vault.assets();
+    assets += Number(_assets);
+  }
+
+  res.json({ assets });
 });
 
 app.get("/inplay", async (req, res) => {
