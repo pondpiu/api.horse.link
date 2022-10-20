@@ -321,7 +321,11 @@ app.get("/odds/:market", async (req, res) => {
   res.json({ result });
 });
 
-app.get("/history", async (req, res) => {
+/**
+ * @param {Object} [placeEventFilter]
+ * @param {string} [placeEventFilter.owner]
+ */
+const getHistory = async placeEventFilter => {
   const provider = getProvider();
   let markets = await cache.get("markets");
   if (!markets) {
@@ -334,11 +338,13 @@ app.get("/history", async (req, res) => {
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-    const placedFilter = await market.filters.Placed();
+    const placedFilter = await market.filters.Placed(
+      null,
+      null,
+      null,
+      placeEventFilter?.owner
+    );
     const placedLogs = await market.queryFilter(placedFilter);
-
-    // const signature = await signMessage(placedLogs[i].args[0]);
-    // console.log(signature);
 
     for (let j = 0; j < placedLogs.length; j++) {
       results.push({
@@ -349,28 +355,21 @@ app.get("/history", async (req, res) => {
         amount: 0, //placedLogs.amount,
         tx: placedLogs[j].transactionHash
       });
-    };
+    }
   }
 
-  // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
-  // const redemptionEvents = await vm.queryFilter(redemptionFilter, fromBlock, toBlock);
+  return results;
+};
 
+app.get("/history", async (req, res) => {
+  const results = await getHistory();
   res.json({ results });
 });
 
 app.get("/history/:account", async (req, res) => {
-  const results = [
-    {
-      market_id: "1",
-      proposition_id: "1",
-      punter: "0x00",
-      amount: 100,
-      odds: 2.0,
-      result: "win",
-      tx: "0x00"
-    }
-  ];
-
+  const results = await getHistory({
+    owner: req.params.account
+  });
   res.json({ results });
 });
 
