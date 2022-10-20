@@ -382,16 +382,18 @@ app.get("/vaults/performance", async (req, res) => {
     await cache.put("vaults", vaults, 60 * 60 * 24);
   }
 
-  let performance = 0.0;
+  let performance = ethers.BigNumber.from(0);
 
   for (let i = 0; i < vaults.length; i++) {
     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-
-    const _performance = await vault.getPerformance();
-    performance += Number(_performance);
+    const _performance = await vault.getPerformance().catch(e => {
+      console.error(e);
+      return ethers.BigNumber.from(0);
+    });
+    performance = performance.add(_performance);
   }
 
-  res.json({ performance });
+  res.json({ performance: performance.toString() });
 });
 
 app.get("/vault/:id/performance", async (req, res) => {
@@ -422,16 +424,17 @@ app.get("/vaults/liquidity", async (req, res) => {
     await cache.put("vaults", vaults, 60 * 60 * 24);
   }
 
-  let assets = 0.0;
+  let assets = ethers.BigNumber.from(0.0);
 
   for (let i = 0; i < vaults.length; i++) {
     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
 
-    const _assets = await vault.assets();
-    assets += Number(_assets);
+    const _assets = await vault.totalAssets();
+    assets = assets.add(_assets);
   }
+  assets = assets.div(ethers.BigNumber.from(10).pow(18));
 
-  res.json({ assets });
+  res.json({ assets: assets.toString() });
 });
 
 app.get("/inplay", async (req, res) => {
@@ -442,16 +445,17 @@ app.get("/inplay", async (req, res) => {
     await cache.put("markets", markets, 60 * 60 * 24);
   }
 
-  let total = 0.0;
+  let total = ethers.BigNumber.from(0.0);
 
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
     const inplay = await market.getTotalInplay(); // Todo: change to getTotalInPlay
-    total += Number(inplay);
+    total = total.add(inplay);
   }
+  total = total.div(ethers.BigNumber.from(10).pow(18));
 
-  res.json({ total });
+  res.json({ total: total.toString() });
 });
 
 // app.get("/faucet", async (req, res) => {
@@ -478,12 +482,9 @@ app.post("/faucet", async (req, res) => {
   ); // process.env.NODE
 
   // Mock USDT
-  const address = req.body.address || "0xaF2929Ed6758B0bD9575e1F287b85953B08E50BC";
-  const contract = new ethers.Contract(
-    address,
-    erc_20_abi.abi,
-    provider
-  );
+  const address =
+    req.body.address || "0xaF2929Ed6758B0bD9575e1F287b85953B08E50BC";
+  const contract = new ethers.Contract(address, erc_20_abi.abi, provider);
 
   const private_key = process.env.FAUCET_PRIVATE_KEY;
   console.log(private_key);
