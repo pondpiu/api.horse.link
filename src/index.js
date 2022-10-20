@@ -337,19 +337,19 @@ app.get("/history", async (req, res) => {
     const placedFilter = await market.filters.Placed();
     const placedLogs = await market.queryFilter(placedFilter);
 
-    const signature = await signMessage(placedLogs[i].args[0]);
-    console.log(signature);
+    // const signature = await signMessage(placedLogs[i].args[0]);
+    // console.log(signature);
 
-    results.push({
-      index: i,
-      market_id: "1",
-      proposition_id: placedLogs[0].args[0],
-      punter: placedLogs[0].args[3],
-      amount: placedLogs.amount,
-      tx: placedLogs[0].transactionHash,
-      market: markets[i],
-      signature: signature
-    });
+    for (let j = 0; j < placedLogs.length; j++) {
+      results.push({
+        index: j,
+        market_id: market.address,
+        proposition_id: placedLogs[j].args[0],
+        punter: placedLogs[j].args[3],
+        amount: 0, //placedLogs.amount,
+        tx: placedLogs[j].transactionHash
+      });
+    };
   }
 
   // event Placed(bytes32 propositionId, uint256 amount, uint256 payout, address indexed owner);
