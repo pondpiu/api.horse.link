@@ -347,13 +347,16 @@ const getHistory = async placeEventFilter => {
     const placedLogs = await market.queryFilter(placedFilter);
 
     for (let j = 0; j < placedLogs.length; j++) {
+      const { args, transactionHash, blockNumber } = placedLogs[j];
+      const [proposition_id, amount, payout, owner] = args;
       results.push({
         index: j,
         market_id: market.address,
-        proposition_id: placedLogs[j].args[0],
-        punter: placedLogs[j].args[3],
-        amount: 0, //placedLogs.amount,
-        tx: placedLogs[j].transactionHash
+        proposition_id,
+        punter: owner,
+        amount: ethers.utils.formatUnits(amount, 18),
+        tx: transactionHash,
+        blockNumber
       });
     }
   }
@@ -431,9 +434,8 @@ app.get("/vaults/liquidity", async (req, res) => {
     const _assets = await vault.totalAssets();
     assets = assets.add(_assets);
   }
-  assets = assets.div(ethers.BigNumber.from(10).pow(18));
 
-  res.json({ assets: assets.toString() });
+  res.json({ assets: ethers.utils.formatUnits(assets, 18) });
 });
 
 app.get("/inplay", async (req, res) => {
@@ -452,9 +454,8 @@ app.get("/inplay", async (req, res) => {
     const inplay = await market.getTotalInplay(); // Todo: change to getTotalInPlay
     total = total.add(inplay);
   }
-  total = total.div(ethers.BigNumber.from(10).pow(18));
 
-  res.json({ total: total.toString() });
+  res.json({ total: ethers.utils.formatUnits(total, 18) });
 });
 
 // app.get("/faucet", async (req, res) => {
