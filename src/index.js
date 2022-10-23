@@ -8,12 +8,11 @@ const crypto = require("crypto");
 const accounts = require("web3-eth-accounts");
 const ethers = require("ethers");
 
-// const cache = require("memory-cache");
 const NodeCache = require("node-cache");
 const cache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 const axios = require("axios");
 
-const redis = require("redis");
+const redis = require("async-redis");
 
 const erc_20_abi = require("../abis/ERC20.json");
 const market_abi = require("../abis/Market.json");
@@ -32,14 +31,21 @@ let redisClient;
 
 // use memory or redis cache
 const setCache = async (key, value, seconds) => {
+  if (use_redis) {
+    await redisClient.set(key, value);
+  }
+
   await cache.set(key, value, seconds);
 };
 
 const getCache = async key => {
   if (use_redis) {
-    await redisClient.connect();
-    await redisClient.open(process.env.REDIS_URL || "redis://localhost:6379");
-    return await redisClient.get(key);
+    // const exists = await redisClient.exists(key);
+    // console.log("exists", exists);
+    // if (exists) {
+      const result = await redisClient.get(key);
+      return result;
+    //}
   }
 
   return await cache.get(key);
@@ -590,7 +596,7 @@ app.listen(PORT, err => {
       process.env.REDIS_URL || "redis://localhost:6379"
     );
     // redisClient = redis.createClient("redis://192.168.1.20:6379");
-    // client.connect();
+
   }
 
   console.log(`Server listening on PORT ${PORT}`);
