@@ -40,12 +40,8 @@ const setCache = async (key, value, seconds) => {
 
 const getCache = async key => {
   if (use_redis) {
-    // const exists = await redisClient.exists(key);
-    // console.log("exists", exists);
-    // if (exists) {
-      const result = await redisClient.get(key);
-      return result;
-    //}
+    const result = await redisClient.get(key);
+    return result;
   }
 
   return await cache.get(key);
@@ -150,6 +146,7 @@ const getMarketAddresses = async provider => {
     markets.push(market);
   }
 
+  console.log(markets);
   return markets;
 };
 
@@ -157,7 +154,12 @@ const getMarketDetails = async (provider, address) => {
   const marketContract = new ethers.Contract(address, market_abi.abi, provider);
   const vaultAddress = await marketContract.getVaultAddress();
 
-  const vaultContract = new ethers.Contract(vaultAddress, vault_abi.abi, provider);
+  const vaultContract = new ethers.Contract(
+    vaultAddress,
+    vault_abi.abi,
+    provider
+  );
+
   const name = await vaultContract.name();
 
   const market = {
@@ -247,51 +249,49 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const cached_runners = await getCache(market_id);
   let runners;
 
-  // if (!cached_runners) {
-  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
-  // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
+  if (!cached_runners) {
+    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
+    // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
 
-  const config = {
-    method: "get",
-    url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
-    headers: {}
-  };
+    const config = {
+      method: "get",
+      url: `https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/${today}/meetings/R/${track}/races/${race}?jurisdiction=QLD&returnPromo=false`,
+      headers: {}
+    };
 
-  const result = await axios(config);
-  console.log(config.url);
+    const result = await axios(config);
+    const now = moment().unix();
 
-  const now = moment().unix();
+    const nonce = getNonce();
+    const close = 0;
+    const end = now + 60 * 60 * 12;
 
-  const nonce = getNonce();
-  const close = 0;
-  const end = now + 60 * 60 * 12;
+    runners = result.data.runners.map(item => {
+      const odds = item.fixedOdds.returnWin * 1000;
 
-  runners = result.data.runners.map(item => {
-    const odds = item.fixedOdds.returnWin * 1000;
+      const runner = {};
+      runner.nonce = nonce;
+      runner.number = item.runnerNumber;
+      runner.name = item.runnerName.toUpperCase();
+      runner.market_id = market_id;
+      runner.close = close;
+      runner.end = end;
+      runner.odds = odds; // todo: get precision from contract
+      runner.proposition_id = `${market_id}${item.runnerNumber}`;
 
-    const runner = {};
-    runner.nonce = nonce;
-    runner.number = item.runnerNumber;
-    runner.name = item.runnerName.toUpperCase();
-    runner.market_id = market_id;
-    runner.close = close;
-    runner.end = end;
-    runner.odds = odds; // todo: get precision from contract
-    runner.proposition_id = `${market_id}${item.runnerNumber}`;
+      runner.barrier = item.barrierNumber;
 
-    runner.barrier = item.barrierNumber;
+      runner.signature = sign(
+        `${nonce}-${market_id}${item.runnerNumber}-${odds}-${close}-${end}`
+      );
 
-    runner.signature = sign(
-      `${nonce}-${market_id}${item.runnerNumber}-${odds}-${close}-${end}`
-    );
+      return runner;
+    });
 
-    return runner;
-  });
+    await setCache(market_id, runners, 10);
+  }
 
   const sumOfOdds = runners.reduce((a, b) => a + b.odds, 0);
-
-  setCache(market_id, runners, 60);
-  //}
 
   const runners_response = {
     owner: OWNER,
@@ -382,11 +382,11 @@ app.get("/odds/:market", async (req, res) => {
   res.json({ result });
 });
 
-app.get("/results/:propstionid", async (req, res) => {
+app.get("/results/:fullid", async (req, res) => {
   // https://www.tab.com.au/racing/2022-10-20/GATTON/B/R/1
 
   // `${today}_${track}_${race}_W`
-  const proposition_id = req.params.propstionid;
+  const proposition_id = req.params.fullid;
   const parts = proposition_id.split("_");
 
   if (parts.length !== 4) {
@@ -407,7 +407,7 @@ app.get("/results/:propstionid", async (req, res) => {
   const races = results.data.meetings.find(m => m.location === parts[1]);
   const result = races.find(r => r.raceNumber === parts[2]);
 
-  res.json(results);
+  res.json(result);
 });
 
 /**
@@ -596,7 +596,6 @@ app.listen(PORT, err => {
       process.env.REDIS_URL || "redis://localhost:6379"
     );
     // redisClient = redis.createClient("redis://192.168.1.20:6379");
-
   }
 
   console.log(`Server listening on PORT ${PORT}`);
