@@ -27,7 +27,7 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
 
-const use_redis = false;
+const use_redis = process.env.CACHE === "redis" || false;
 let redisClient;
 
 // use memory or redis cache
@@ -37,6 +37,7 @@ const setCache = async (key, value, seconds) => {
 
 const getCache = async key => {
   if (use_redis) {
+    await redisClient.connect();
     await redisClient.open(process.env.REDIS_URL || "redis://localhost:6379");
     return await redisClient.get(key);
   }
@@ -126,7 +127,9 @@ app.get("/", (req, res) => {
 });
 
 const getMarketAddresses = async provider => {
-  const registeryAddress = process.env.REGISTRY_CONTRACT || "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+  const registeryAddress =
+    process.env.REGISTRY_CONTRACT ||
+    "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
   const contract = new ethers.Contract(
     registeryAddress,
     registry_abi.abi,
@@ -145,21 +148,18 @@ const getMarketAddresses = async provider => {
 };
 
 const getMarketDetails = async (provider, address) => {
-  const contract = new ethers.Contract(
+  const marketContract = new ethers.Contract(address, market_abi.abi, provider);
+  const vaultAddress = await marketContract.getVaultAddress();
+
+  const vaultContract = new ethers.Contract(vaultAddress, vault_abi.abi, provider);
+  const name = await vaultContract.name();
+
+  const market = {
     address,
-    market_abi.abi,
-    provider
-  );
+    name
+  };
 
-  const count = await contract.marketCount();
-  const markets = [];
-
-  for (let i = 0; i < Number(count) - 1; i++) {
-    const market = await contract.markets(i);
-    markets.push(market);
-  }
-
-  return markets;
+  return market;
 };
 
 app.get("/markets", async (req, res) => {
@@ -176,8 +176,29 @@ app.get("/markets", async (req, res) => {
   res.end();
 });
 
+app.get("/markets/details", async (req, res) => {
+  let market_addresses = await getCache("markets"); // todo: market address
+
+  if (!market_addresses) {
+    market_addresses = await getMarketAddresses(getProvider());
+    await setCache("markets", response, 60 * 60 * 24);
+  }
+
+  const markets = [];
+  for (let i = 0; i < market_addresses.length; i++) {
+    const market = await getMarketDetails(getProvider(), market_addresses[i]);
+    console.log(market);
+    markets.push(market);
+  }
+
+  res.send(markets);
+  res.end();
+});
+
 const getVaultAddresses = async provider => {
-  const registeryAddress = process.env.REGISTRY_CONTRACT || "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+  const registeryAddress =
+    process.env.REGISTRY_CONTRACT ||
+    "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
   const contract = new ethers.Contract(
     registeryAddress,
     registry_abi.abi,
@@ -565,7 +586,10 @@ app.listen(PORT, err => {
   if (err) console.log(err);
 
   if (use_redis) {
-    redisClient = redis.createClient(process.env.REDIS_URL || "redis://localhost:6379");
+    redisClient = redis.createClient(
+      process.env.REDIS_URL || "redis://localhost:6379"
+    );
+    // redisClient = redis.createClient("redis://192.168.1.20:6379");
     // client.connect();
   }
 
