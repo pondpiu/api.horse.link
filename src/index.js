@@ -8,8 +8,12 @@ const crypto = require("crypto");
 const accounts = require("web3-eth-accounts");
 const ethers = require("ethers");
 
-const cache = require("memory-cache");
+// const cache = require("memory-cache");
+const NodeCache = require("node-cache");
+const cache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 const axios = require("axios");
+
+const redis = require("redis");
 
 const erc_20_abi = require("../abis/ERC20.json");
 const market_abi = require("../abis/Market.json");
@@ -22,6 +26,23 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 const OWNER = process.env.OWNER || "0x155c21c846b68121ca59879B3CCB5194F5Ae115E";
+
+const use_redis = false;
+let redisClient;
+
+// use memory or redis cache
+const setCache = async (key, value, seconds) => {
+  await cache.set(key, value, seconds);
+};
+
+const getCache = async key => {
+  if (use_redis) {
+    await redisClient.open(process.env.REDIS_URL || "redis://localhost:6379");
+    return await redisClient.get(key);
+  }
+
+  return await cache.get(key);
+};
 
 const getProvider = () => {
   const provider = new ethers.providers.JsonRpcProvider(
@@ -49,8 +70,7 @@ const signMessage = async message => {
   const private_key = process.env.PRIVATE_KEY;
 
   const wallet = new ethers.Wallet(private_key);
-  const flatSig = await wallet.signMessage(message);
-  return flatSig;
+  return await wallet.signMessage(message);
 };
 
 const getToday = format => {
@@ -105,10 +125,10 @@ app.get("/", (req, res) => {
   res.send(`${message} ${signature.signature}`);
 });
 
-const getMarkets = async provider => {
-  const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+const getMarketAddresses = async provider => {
+  const registeryAddress = process.env.REGISTRY_CONTRACT || "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
   const contract = new ethers.Contract(
-    contractAddress,
+    registeryAddress,
     registry_abi.abi,
     provider
   );
@@ -124,25 +144,42 @@ const getMarkets = async provider => {
   return markets;
 };
 
+const getMarketDetails = async (provider, address) => {
+  const contract = new ethers.Contract(
+    address,
+    market_abi.abi,
+    provider
+  );
+
+  const count = await contract.marketCount();
+  const markets = [];
+
+  for (let i = 0; i < Number(count) - 1; i++) {
+    const market = await contract.markets(i);
+    markets.push(market);
+  }
+
+  return markets;
+};
+
 app.get("/markets", async (req, res) => {
-  const cached_markets = await cache.get("markets");
+  const cached_markets = await getCache("markets");
   if (cached_markets) {
     res.send(cached_markets);
     return;
   }
 
-  const response = await getMarkets(getProvider());
-
-  await cache.put("markets", response, 60 * 60 * 24);
+  const response = await getMarketAddresses(getProvider());
+  await setCache("markets", response, 60 * 60 * 24);
 
   res.send(response);
   res.end();
 });
 
-const getVaults = async provider => {
-  const contractAddress = "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+const getVaultAddresses = async provider => {
+  const registeryAddress = process.env.REGISTRY_CONTRACT || "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
   const contract = new ethers.Contract(
-    contractAddress,
+    registeryAddress,
     registry_abi.abi,
     provider
   );
@@ -159,14 +196,14 @@ const getVaults = async provider => {
 };
 
 app.get("/vaults", async (req, res) => {
-  const cached_vaults = await cache.get("vaults");
+  const cached_vaults = await getCache("vaults");
   if (cached_vaults) {
     res.send(cached_vaults);
     return;
   }
 
-  const response = await getVaults(getProvider());
-  await cache.put("vaults", response, 60 * 60 * 24);
+  const response = await getVaultAddresses(getProvider());
+  await setCache("vaults", response, 60 * 60 * 24);
 
   res.send(response);
   res.end();
@@ -180,7 +217,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const race = req.params.race;
 
   const market_id = `${today}_${track}_${race}_W`;
-  const cached_runners = await cache.get(market_id);
+  const cached_runners = await getCache(market_id);
   let runners;
 
   // if (!cached_runners) {
@@ -214,9 +251,6 @@ app.get("/runners/:track/:race/win", async (req, res) => {
     runner.end = end;
     runner.odds = odds; // todo: get precision from contract
     runner.proposition_id = `${market_id}${item.runnerNumber}`;
-    runner.proposition_id_hash = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(`${market_id}${item.runnerNumber}`)
-    );
 
     runner.barrier = item.barrierNumber;
 
@@ -229,7 +263,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
 
   const sumOfOdds = runners.reduce((a, b) => a + b.odds, 0);
 
-  cache.put(market_id, runners, 1000 * 60 * 60);
+  setCache(market_id, runners, 60);
   //}
 
   const runners_response = {
@@ -245,12 +279,12 @@ app.get("/runners/:track/:race/win", async (req, res) => {
 
 //
 app.get("/meetings", async (req, res) => {
-  const meetings = await cache.get("meetings");
+  const meetings = await getCache("meetings");
   if (!meetings) {
     const today = getToday("YYYY-MM-DD");
     const result = await getMeetings(today);
 
-    cache.put("meetings", result, 1000 * 60);
+    await setCache("meetings", result, 60);
   }
 
   const now = moment().unix();
@@ -260,7 +294,7 @@ app.get("/meetings", async (req, res) => {
     nonce: getNonce(),
     created: now,
     expires: now + 60 * 1000,
-    meetings: cache.get("meetings")
+    meetings: await getCache("meetings")
   };
 
   const signature = sign(meetings_response);
@@ -279,8 +313,8 @@ app.get("/meetings", async (req, res) => {
 app.get("/meetings/:date", async (req, res) => {
   // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-05-14/meetings?jurisdiction=QLD
 
-  const meetings = getMeetings(req.params.date);
-  cache.put("meetings", meetings, 1000 * 60 * 60);
+  const meetings = await getMeetings(req.params.date);
+  await setCache("meetings", meetings, 60);
 
   const now = moment().unix();
 
@@ -289,7 +323,7 @@ app.get("/meetings/:date", async (req, res) => {
     nonce: getNonce(),
     created: now,
     expires: now + 60 * 1000,
-    meetings: cache.get("meetings")
+    meetings: await getCache("meetings")
   };
 
   const signature = sign(meetings_response);
@@ -314,11 +348,39 @@ app.get("/odds/:market", async (req, res) => {
 
   const odds = ethers.BigNumber.from(req.query.odds);
   const wager = ethers.BigNumber.from(req.query.wager);
-  const proposition_id = req.query.proposition_id_hash;
+  const proposition_id = req.query.proposition_id;
 
   const result = await contract.getOdds(odds, wager, proposition_id);
 
   res.json({ result });
+});
+
+app.get("/results/:propstionid", async (req, res) => {
+  // https://www.tab.com.au/racing/2022-10-20/GATTON/B/R/1
+
+  // `${today}_${track}_${race}_W`
+  const proposition_id = req.params.propstionid;
+  const parts = proposition_id.split("_");
+
+  if (parts.length !== 4) {
+    res.json({ error: "invalid proposition id" });
+    return;
+  }
+
+  const date = parts[0];
+
+  const config = {
+    method: "get",
+    url: `https://api.beta.tab.com.au/v1/historical-results-service/QLD/racing/${date}`,
+    headers: {}
+  };
+
+  const results = await axios(config);
+
+  const races = results.data.meetings.find(m => m.location === parts[1]);
+  const result = races.find(r => r.raceNumber === parts[2]);
+
+  res.json(results);
 });
 
 /**
@@ -327,10 +389,10 @@ app.get("/odds/:market", async (req, res) => {
  */
 const getHistory = async placeEventFilter => {
   const provider = getProvider();
-  let markets = await cache.get("markets");
+  let markets = await getCache("markets");
   if (!markets) {
-    markets = await getMarkets(provider);
-    await cache.put("markets", markets, 60 * 60 * 24);
+    markets = await getMarketAddresses(provider);
+    await setCache("markets", markets, 60);
   }
 
   const results = [];
@@ -380,10 +442,10 @@ app.get("/history/:account", async (req, res) => {
 
 app.get("/vaults/performance", async (req, res) => {
   const provider = getProvider();
-  let vaults = await cache.get("vaults");
+  let vaults = await getCache("vaults");
   if (!vaults) {
-    vaults = await getVaults(provider);
-    await cache.put("vaults", vaults, 60 * 60 * 24);
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
   }
 
   let performance = ethers.BigNumber.from(0);
@@ -402,10 +464,10 @@ app.get("/vaults/performance", async (req, res) => {
 
 app.get("/vault/:id/performance", async (req, res) => {
   const provider = getProvider();
-  let vaults = await cache.get("vaults");
+  let vaults = await getCache("vaults");
   if (!vaults) {
-    vaults = await getVaults(provider);
-    await cache.put("vaults", vaults, 60 * 60 * 24);
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
   }
 
   let performance = 0.0;
@@ -422,10 +484,10 @@ app.get("/vault/:id/performance", async (req, res) => {
 
 app.get("/vaults/liquidity", async (req, res) => {
   const provider = getProvider();
-  let vaults = await cache.get("vaults");
+  let vaults = await getCache("vaults");
   if (!vaults) {
-    vaults = await getVaults(provider);
-    await cache.put("vaults", vaults, 60 * 60 * 24);
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
   }
 
   let assets = ethers.BigNumber.from(0.0);
@@ -442,10 +504,10 @@ app.get("/vaults/liquidity", async (req, res) => {
 
 app.get("/inplay", async (req, res) => {
   const provider = getProvider();
-  let markets = await cache.get("markets");
+  let markets = await getCache("markets");
   if (!markets) {
-    markets = await getMarkets(provider);
-    await cache.put("markets", markets, 60 * 60 * 24);
+    markets = await getMarketAddresses(provider);
+    await setCache("markets", markets, 3600);
   }
 
   let total = ethers.BigNumber.from(0.0);
@@ -501,5 +563,11 @@ app.post("/faucet", async (req, res) => {
 
 app.listen(PORT, err => {
   if (err) console.log(err);
+
+  if (use_redis) {
+    redisClient = redis.createClient(process.env.REDIS_URL || "redis://localhost:6379");
+    // client.connect();
+  }
+
   console.log(`Server listening on PORT ${PORT}`);
 });
