@@ -199,19 +199,13 @@ app.get("/markets/:address", async (req, res) => {
   }
 
   const response = await getMarketDetails(getProvider(), address);
-  await setCache(`market-${address}`, response, 60 * 60 * 24);
+  await setCache(`market-${address}`, response, 60);
 
   res.send(response);
   res.end();
 });
 
 app.get("/markets/details", async (req, res) => {
-  const cached_markets_details = await getCache("markets_details");
-  if (cached_markets_details) {
-    res.send(cached_markets_details);
-    return;
-  }
-
   let market_addresses = await getCache("markets"); // todo: market address
 
   if (!market_addresses) {
