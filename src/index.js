@@ -153,18 +153,24 @@ const getMarketAddresses = async provider => {
 const getMarketDetails = async (provider, address) => {
   const marketContract = new ethers.Contract(address, market_abi.abi, provider);
   const vaultAddress = await marketContract.getVaultAddress();
-
   const vaultContract = new ethers.Contract(
     vaultAddress,
     vault_abi.abi,
     provider
   );
 
-  const name = await vaultContract.name();
+  const [name, target, totalInPlay] = await Promise.all([
+    vaultContract.name(),
+    marketContract.getTarget(),
+    marketContract.getTotalInplay()
+  ]);
 
   const market = {
     address,
-    name
+    vaultAddress,
+    name,
+    target,
+    totalInPlay: ethers.utils.formatEther(totalInPlay)
   };
 
   return market;
@@ -184,12 +190,33 @@ app.get("/markets", async (req, res) => {
   res.end();
 });
 
+app.get("/markets/:address", async (req, res) => {
+  const address = req.params.address;
+  const cached_market = await getCache(`market-${address}`);
+  if (cached_market) {
+    res.send(cached_market);
+    return;
+  }
+
+  const response = await getMarketDetails(getProvider(), address);
+  await setCache(`market-${address}`, response, 60 * 60 * 24);
+
+  res.send(response);
+  res.end();
+});
+
 app.get("/markets/details", async (req, res) => {
+  const cached_markets_details = await getCache("markets_details");
+  if (cached_markets_details) {
+    res.send(cached_markets_details);
+    return;
+  }
+
   let market_addresses = await getCache("markets"); // todo: market address
 
   if (!market_addresses) {
     market_addresses = await getMarketAddresses(getProvider());
-    await setCache("markets", response, 60 * 60 * 24);
+    await setCache("markets", market_addresses, 60 * 60 * 24);
   }
 
   const markets = [];
