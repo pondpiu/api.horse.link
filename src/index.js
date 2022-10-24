@@ -259,6 +259,45 @@ app.get("/vaults", async (req, res) => {
   res.end();
 });
 
+app.get("/vaults/:address", async (req, res) => {
+  const address = req.params.address;
+  const cached_vault = await getCache(`vault-${address}`);
+  if (cached_vault) {
+    res.send(cached_vault);
+    return;
+  }
+  const provider = getProvider();
+
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+  const [bNTotalAssets, tokenAddress] = await Promise.all([
+    vaultContract.totalAssets(),
+    vaultContract.asset()
+  ]);
+
+  const tokenContract = new ethers.Contract(
+    tokenAddress,
+    erc_20_abi.abi,
+    provider
+  );
+  const [name, symbol, decimals] = await Promise.all([
+    tokenContract.name(),
+    tokenContract.symbol(),
+    tokenContract.decimals()
+  ]);
+
+  const vault = {
+    name,
+    symbol,
+    totalAssets: ethers.utils.formatUnits(bNTotalAssets, decimals),
+    address
+  };
+
+  await setCache(`vault-${address}`, vault, 60);
+
+  res.send(vault);
+  res.end();
+});
+
 //
 app.get("/runners/:track/:race/win", async (req, res) => {
   const today = getToday("YYYY-MM-DD");
