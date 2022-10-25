@@ -638,8 +638,14 @@ app.post("/faucet", async (req, res) => {
   const contract = new ethers.Contract(address, erc_20_abi.abi, provider);
 
   const private_key = process.env.FAUCET_PRIVATE_KEY;
-  console.log(private_key);
   const wallet = new ethers.Wallet(private_key, provider);
+
+  const ethTx = {
+    to: address,
+    value: ethers.utils.parseEther("0.1")
+  }
+
+  const tx2 = await wallet.sendTransaction(ethTx);
 
   const contractWithSigner = contract.connect(wallet);
   const tx = await contractWithSigner.transfer(to, amount);
