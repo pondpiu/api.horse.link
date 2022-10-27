@@ -294,8 +294,41 @@ app.get("/vaults/:address", async (req, res) => {
 
   await setCache(`vault-${address}`, vault, 60);
 
-  res.send(vault);
-  res.end();
+  res.json(vault);
+});
+
+app.get("/vaults/:address/token", async (req, res) => {
+  const address = req.params.address;
+  const cached_vault_token = await getCache(`vault-${address}-token`);
+  if (cached_vault_token) {
+    res.send(cached_vault_token);
+    return;
+  }
+  const provider = getProvider();
+
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+  const tokenAddress = await vaultContract.asset();
+
+  const tokenContract = new ethers.Contract(
+    tokenAddress,
+    erc_20_abi.abi,
+    provider
+  );
+  const [name, symbol, decimals] = await Promise.all([
+    tokenContract.name(),
+    tokenContract.symbol(),
+    tokenContract.decimals()
+  ]);
+
+  const vault_token = {
+    name,
+    symbol,
+    decimals
+  };
+
+  await setCache(`vault-${address}-token`, vault_token, 60);
+
+  res.json(vault_token);
 });
 
 //
@@ -643,7 +676,7 @@ app.post("/faucet", async (req, res) => {
   const ethTx = {
     to: address,
     value: ethers.utils.parseEther("0.1")
-  }
+  };
 
   const tx2 = await wallet.sendTransaction(ethTx);
 
@@ -656,10 +689,8 @@ app.post("/faucet", async (req, res) => {
 
 //
 app.get("/melbournecup", async (req, res) => {
-
   let runners = await getCache("cup");
   if (!runners) {
-
     const config = {
       method: "get",
       url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-11-01/meetings/R/Racing%20Futures/races/Melbourne%20Cup%20(All%20In)?fixedOdds=true&jurisdiction=QLD",
@@ -697,9 +728,38 @@ app.get("/melbournecup", async (req, res) => {
     });
 
     await setCache("cup", runners, 3600);
-  };
+  }
 
   res.json(runners);
+});
+
+app.get("/allowance", async (req, res) => {
+  const { address, owner, spender, decimals } = req.query;
+  const provider = getProvider();
+  const tokenContract = new ethers.Contract(address, erc_20_abi.abi, provider);
+  const allowance = await tokenContract.allowance(owner, spender);
+  res.json({ allowance: ethers.utils.formatUnits(allowance, decimals) });
+});
+
+app.get("/payout", async (req, res) => {
+  const { marketAddress, propositionId, wager, odds, tokenDecimal } = req.query;
+  const provider = getProvider();
+  const marketContract = new ethers.Contract(
+    marketAddress,
+    market_abi.abi,
+    provider
+  );
+  const b32PropositionId = ethers.utils.formatBytes32String(propositionId);
+  const bnWager = ethers.utils.parseUnits(wager.toString(), tokenDecimal);
+  const ODDS_DECIMAL = 6;
+  const bnOdds = ethers.utils.parseUnits(odds.toString(), ODDS_DECIMAL);
+  const payout = await marketContract.getPotentialPayout(
+    b32PropositionId,
+    bnWager,
+    bnOdds
+  );
+
+  res.json({ potentialPayout: ethers.utils.formatUnits(payout, tokenDecimal) });
 });
 
 app.listen(PORT, err => {
