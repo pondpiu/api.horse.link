@@ -131,7 +131,7 @@ app.get("/", (req, res) => {
 const getMarketAddresses = async provider => {
   const registeryAddress =
     process.env.REGISTRY_CONTRACT ||
-    "0x5Df377d600A40fB6723e4Bf10FD5ee70e93578da";
+    "0x885386d140e4321102dc218060Bbd55a8B020F4C";
   const contract = new ethers.Contract(
     registeryAddress,
     registry_abi.abi,
