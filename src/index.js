@@ -146,7 +146,6 @@ const getMarketAddresses = async provider => {
     markets.push(market);
   }
 
-  console.log(markets);
   return markets;
 };
 
@@ -527,9 +526,14 @@ app.get("/history/:account", async (req, res) => {
   res.json({ results });
 });
 
-app.get("/vaults/performance", async (req, res) => {
+app.get("/vaultsperformance", async (req, res) => {
+  console.log("here");
+
   const provider = getProvider();
   let vaults = await getCache("vaults");
+
+  console.log(vaults);
+
   if (!vaults) {
     vaults = await getVaultAddresses(provider);
     await setCache("vaults", vaults, 3600);
@@ -549,27 +553,27 @@ app.get("/vaults/performance", async (req, res) => {
   res.json({ performance: performance.toString() });
 });
 
-app.get("/vault/:id/performance", async (req, res) => {
-  const provider = getProvider();
-  let vaults = await getCache("vaults");
-  if (!vaults) {
-    vaults = await getVaultAddresses(provider);
-    await setCache("vaults", vaults, 3600);
-  }
+// app.get("/vault/:id/performance", async (req, res) => {
+//   const provider = getProvider();
+//   let vaults = await getCache("vaults");
+//   if (!vaults) {
+//     vaults = await getVaultAddresses(provider);
+//     await setCache("vaults", vaults, 3600);
+//   }
 
-  let performance = 0.0;
+//   let performance = 0.0;
 
-  for (let i = 0; i < vaults.length; i++) {
-    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+//   for (let i = 0; i < vaults.length; i++) {
+//     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
 
-    const _performance = await vault.getPerformance();
-    performance += Number(_performance);
-  }
+//     const _performance = await vault.getPerformance();
+//     performance += Number(_performance);
+//   }
 
-  res.json({ performance });
-});
+//   res.json({ performance });
+// });
 
-app.get("/vaults/liquidity", async (req, res) => {
+app.get("/vaultsliquidity", async (req, res) => {
   const provider = getProvider();
   let vaults = await getCache("vaults");
   if (!vaults) {
