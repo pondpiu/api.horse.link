@@ -141,7 +141,7 @@ const getMarketAddresses = async provider => {
   const count = await contract.marketCount();
   const markets = [];
 
-  for (let i = 0; i < Number(count) - 1; i++) {
+  for (let i = 0; i < Number(count); i++) {
     const market = await contract.markets(i);
     markets.push(market);
   }
@@ -178,10 +178,10 @@ const getMarketDetails = async (provider, address) => {
 
 app.get("/markets", async (req, res) => {
   const cached_markets = await getCache("markets");
-  if (cached_markets) {
-    res.send(cached_markets);
-    return;
-  }
+  // if (cached_markets) {
+  //   res.send(cached_markets);
+  //   return;
+  // }
 
   const response = await getMarketAddresses(getProvider());
   await setCache("markets", response, 60 * 60 * 24);
