@@ -679,13 +679,13 @@ app.get("/melbournecup", async (req, res) => {
 
       const runner = {};
       runner.nonce = nonce;
-      runner.number = item.propositionNumber;
+      runner.number = item.fixedOdds.propositionNumber;
       runner.name = item.runnerName.toUpperCase();
       runner.market_id = market_id;
       runner.close = close;
       runner.end = end;
       runner.odds = odds; // todo: get precision from contract
-      runner.proposition_id = `${market_id}${item.propositionNumber}`;
+      runner.proposition_id = `${market_id}-${item.fixedOdds.propositionNumber}`;
 
       runner.barrier = item.barrierNumber;
 
