@@ -161,7 +161,7 @@ const getMarketDetails = async (provider, address) => {
   const [name, target, totalInPlay] = await Promise.all([
     vaultContract.name(),
     marketContract.getTarget(),
-    marketContract.getTotalInplay()
+    marketContract.getTotalInPlay()
   ]);
 
   const market = {
@@ -635,7 +635,7 @@ app.get("/inplay", async (req, res) => {
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-    const inplay = await market.getTotalInplay(); // Todo: change to getTotalInPlay
+    const inplay = await market.getTotalInPlay();
     total = total.add(inplay);
   }
 
