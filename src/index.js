@@ -189,21 +189,6 @@ app.get("/markets", async (req, res) => {
   res.end();
 });
 
-app.get("/markets/:address", async (req, res) => {
-  const address = req.params.address;
-  const cached_market = await getCache(`market-${address}`);
-  if (cached_market) {
-    res.send(cached_market);
-    return;
-  }
-
-  const response = await getMarketDetails(getProvider(), address);
-  await setCache(`market-${address}`, response, 60);
-
-  res.send(response);
-  res.end();
-});
-
 app.get("/markets/details", async (req, res) => {
   let market_addresses = await getCache("markets"); // todo: market address
 
@@ -220,6 +205,21 @@ app.get("/markets/details", async (req, res) => {
   }
 
   res.send(markets);
+  res.end();
+});
+
+app.get("/markets/:address", async (req, res) => {
+  const address = req.params.address;
+  const cached_market = await getCache(`market-${address}`);
+  if (cached_market) {
+    res.send(cached_market);
+    return;
+  }
+
+  const response = await getMarketDetails(getProvider(), address);
+  await setCache(`market-${address}`, response, 60);
+
+  res.send(response);
   res.end();
 });
 
@@ -258,6 +258,103 @@ app.get("/vaults", async (req, res) => {
   res.end();
 });
 
+app.get("/vaults/performance", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let performance = ethers.BigNumber.from(0);
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+    const _performance = await vault.getPerformance().catch(e => {
+      console.error(e);
+      return ethers.BigNumber.from(0);
+    });
+    performance = performance.add(_performance);
+  }
+
+  res.json({ performance: performance.toString() });
+});
+
+app.get("/vaults/liquidity", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let assets = ethers.BigNumber.from(0.0);
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _assets = await vault.totalAssets();
+    assets = assets.add(_assets);
+  }
+
+  res.json({ assets: ethers.utils.formatUnits(assets, 18) });
+});
+
+app.get("/vault/:id/performance", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let performance = 0.0;
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _performance = await vault.getPerformance();
+    performance += Number(_performance);
+  }
+
+  res.json({ performance });
+});
+
+app.get("/vaults/:address/token", async (req, res) => {
+  const address = req.params.address;
+  const cached_vault_token = await getCache(`vault-${address}-token`);
+  if (cached_vault_token) {
+    res.send(cached_vault_token);
+    return;
+  }
+  const provider = getProvider();
+
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+  const tokenAddress = await vaultContract.asset();
+
+  const tokenContract = new ethers.Contract(
+    tokenAddress,
+    erc_20_abi.abi,
+    provider
+  );
+  const [name, symbol, decimals] = await Promise.all([
+    tokenContract.name(),
+    tokenContract.symbol(),
+    tokenContract.decimals()
+  ]);
+
+  const vault_token = {
+    name,
+    symbol,
+    decimals
+  };
+
+  await setCache(`vault-${address}-token`, vault_token, 60);
+
+  res.json(vault_token);
+});
+
 app.get("/vaults/:address", async (req, res) => {
   const address = req.params.address;
   const cached_vault = await getCache(`vault-${address}`);
@@ -294,40 +391,6 @@ app.get("/vaults/:address", async (req, res) => {
   await setCache(`vault-${address}`, vault, 60);
 
   res.json(vault);
-});
-
-app.get("/vaults/:address/token", async (req, res) => {
-  const address = req.params.address;
-  const cached_vault_token = await getCache(`vault-${address}-token`);
-  if (cached_vault_token) {
-    res.send(cached_vault_token);
-    return;
-  }
-  const provider = getProvider();
-
-  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
-  const tokenAddress = await vaultContract.asset();
-
-  const tokenContract = new ethers.Contract(
-    tokenAddress,
-    erc_20_abi.abi,
-    provider
-  );
-  const [name, symbol, decimals] = await Promise.all([
-    tokenContract.name(),
-    tokenContract.symbol(),
-    tokenContract.decimals()
-  ]);
-
-  const vault_token = {
-    name,
-    symbol,
-    decimals
-  };
-
-  await setCache(`vault-${address}-token`, vault_token, 60);
-
-  res.json(vault_token);
 });
 
 //
@@ -557,73 +620,6 @@ app.get("/history/:account", async (req, res) => {
     owner: req.params.account
   });
   res.json({ results });
-});
-
-app.get("/vaultsperformance", async (req, res) => {
-  console.log("here");
-
-  const provider = getProvider();
-  let vaults = await getCache("vaults");
-
-  console.log(vaults);
-
-  if (!vaults) {
-    vaults = await getVaultAddresses(provider);
-    await setCache("vaults", vaults, 3600);
-  }
-
-  let performance = ethers.BigNumber.from(0);
-
-  for (let i = 0; i < vaults.length; i++) {
-    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-    const _performance = await vault.getPerformance().catch(e => {
-      console.error(e);
-      return ethers.BigNumber.from(0);
-    });
-    performance = performance.add(_performance);
-  }
-
-  res.json({ performance: performance.toString() });
-});
-
-// app.get("/vault/:id/performance", async (req, res) => {
-//   const provider = getProvider();
-//   let vaults = await getCache("vaults");
-//   if (!vaults) {
-//     vaults = await getVaultAddresses(provider);
-//     await setCache("vaults", vaults, 3600);
-//   }
-
-//   let performance = 0.0;
-
-//   for (let i = 0; i < vaults.length; i++) {
-//     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-
-//     const _performance = await vault.getPerformance();
-//     performance += Number(_performance);
-//   }
-
-//   res.json({ performance });
-// });
-
-app.get("/vaultsliquidity", async (req, res) => {
-  const provider = getProvider();
-  let vaults = await getCache("vaults");
-  if (!vaults) {
-    vaults = await getVaultAddresses(provider);
-    await setCache("vaults", vaults, 3600);
-  }
-
-  let assets = ethers.BigNumber.from(0.0);
-
-  for (let i = 0; i < vaults.length; i++) {
-    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-
-    const _assets = await vault.totalAssets();
-    assets = assets.add(_assets);
-  }
-
-  res.json({ assets: ethers.utils.formatUnits(assets, 18) });
 });
 
 app.get("/inplay", async (req, res) => {
