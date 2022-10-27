@@ -654,6 +654,54 @@ app.post("/faucet", async (req, res) => {
   res.json({ tx: tx.hash });
 });
 
+//
+app.get("/melbournecup", async (req, res) => {
+
+  let runners = await getCache("cup");
+  if (!runners) {
+
+    const config = {
+      method: "get",
+      url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-11-01/meetings/R/Racing%20Futures/races/Melbourne%20Cup%20(All%20In)?fixedOdds=true&jurisdiction=QLD",
+      headers: {}
+    };
+
+    const result = await axios(config);
+    const now = moment().unix();
+
+    const nonce = getNonce();
+    const close = 0;
+    const end = now + 60 * 60 * 12;
+    const market_id = "melbournecup2022";
+
+    runners = result.data.runners.map(item => {
+      const odds = item.fixedOdds.returnWin * 1000;
+
+      const runner = {};
+      runner.nonce = nonce;
+      runner.number = item.propositionNumber;
+      runner.name = item.runnerName.toUpperCase();
+      runner.market_id = market_id;
+      runner.close = close;
+      runner.end = end;
+      runner.odds = odds; // todo: get precision from contract
+      runner.proposition_id = `${market_id}${item.propositionNumber}`;
+
+      runner.barrier = item.barrierNumber;
+
+      runner.signature = sign(
+        `${nonce}-${market_id}${item.propositionNumber}-${odds}-${close}-${end}`
+      );
+
+      return runner;
+    });
+
+    await setCache("cup", runners, 3600);
+  };
+
+  res.json(runners);
+});
+
 app.listen(PORT, err => {
   if (err) console.log(err);
 
