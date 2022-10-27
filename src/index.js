@@ -405,6 +405,7 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   let runners;
 
   if (!cached_runners) {
+    console.log("Fetching runners from API");
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
 
