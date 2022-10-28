@@ -707,7 +707,6 @@ app.post("/faucet", async (req, res) => {
 
   const tx = await contractWithSigner.transfer(to, amount);
   const tx2 = await wallet.sendTransaction(ethTx);
-  ]);
 
   res.json({
     tx: tx.hash,
