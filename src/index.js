@@ -706,11 +706,11 @@ app.post("/faucet", async (req, res) => {
   const contractWithSigner = contract.connect(wallet);
 
   const tx = await contractWithSigner.transfer(to, amount);
-  const tx2 = wallet.sendTransaction(ethTx);
+  const tx2 = await wallet.sendTransaction(ethTx);
   ]);
 
   res.json({
-    tx: tx.hash
+    tx: tx.hash,
     tx2: tx2.hash
   });
 });
