@@ -682,7 +682,7 @@ app.get("/inplay", async (req, res) => {
 
 app.post("/faucet", async (req, res) => {
   const to = req.body.to;
-  const amount = req.body.amount;
+  const amount = ethers.BigNumber.from(req.body.amount);
 
   const provider = new ethers.providers.JsonRpcProvider(
     "https://eth-goerli.g.alchemy.com/v2/nj04KvcteO8qScoGLSYrz0p_tseWlb28"
@@ -696,12 +696,12 @@ app.post("/faucet", async (req, res) => {
   const private_key = process.env.FAUCET_PRIVATE_KEY;
   const wallet = new ethers.Wallet(private_key, provider);
 
-  const ethTx = {
-    to: address,
-    value: ethers.utils.parseEther("0.1")
-  };
+  // const ethTx = {
+  //   to: address,
+  //   value: ethers.utils.parseEther("0.1")
+  // }
 
-  const tx2 = await wallet.sendTransaction(ethTx);
+  // const tx2 = await wallet.sendTransaction(ethTx);
 
   const contractWithSigner = contract.connect(wallet);
   const tx = await contractWithSigner.transfer(to, amount);
