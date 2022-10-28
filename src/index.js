@@ -700,17 +700,17 @@ app.post("/faucet", async (req, res) => {
 
   const ethTx = {
     to,
-    value: ethers.utils.parseEther("0.01")
+    value: ethers.utils.parseEther("0.1")
   };
 
   const contractWithSigner = contract.connect(wallet);
-  const [tx, tx2] = await Promise.all([
-    contractWithSigner.transfer(to, amount),
-    wallet.sendTransaction(ethTx)
+
+  const tx = await contractWithSigner.transfer(to, amount);
+  const tx2 = wallet.sendTransaction(ethTx);
   ]);
 
   res.json({
-    tx: tx.hash,
+    tx: tx.hash
     tx2: tx2.hash
   });
 });
