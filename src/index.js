@@ -314,7 +314,10 @@ app.get("/vaults/:id/performance", async (req, res) => {
   for (let i = 0; i < vaults.length; i++) {
     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
 
-    const _performance = await vault.getPerformance();
+    const _performance = await vault.getPerformance().catch(e => {
+      console.error(e);
+      return ethers.BigNumber.from(0);
+    });
     performance += Number(_performance);
   }
 
