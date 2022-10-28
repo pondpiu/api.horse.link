@@ -160,7 +160,7 @@ const getMarketDetails = async (provider, address) => {
 
   const [name, target, totalInPlay] = await Promise.all([
     vaultContract.name(),
-    marketContract.getTarget(),
+    marketContract.getFee(),
     marketContract.getTotalInPlay()
   ]);
 
@@ -584,6 +584,8 @@ const getHistory = async placeEventFilter => {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
     const placedFilter = await market.filters.Placed(
+      null,
+      null,
       null,
       null,
       null,
