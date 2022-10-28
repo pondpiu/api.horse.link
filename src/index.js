@@ -261,7 +261,6 @@ app.get("/vaults", async (req, res) => {
 app.get("/vaults/performance", async (req, res) => {
   const provider = getProvider();
   let vaults = await getCache("vaults");
-
   if (!vaults) {
     vaults = await getVaultAddresses(provider);
     await setCache("vaults", vaults, 3600);
@@ -699,18 +698,17 @@ app.post("/faucet", async (req, res) => {
   const private_key = process.env.FAUCET_PRIVATE_KEY;
   const wallet = new ethers.Wallet(private_key, provider);
 
-  // const ethTx = {
-  //   to: address,
-  //   value: ethers.utils.parseEther("0.1")
-  // }
+  const ethTx = {
+    to,
+    value: ethers.utils.parseEther("0.01")
+  };
 
-  // const tx2 = await wallet.sendTransaction(ethTx);
+  const tx2 = await wallet.sendTransaction(ethTx);
 
   const contractWithSigner = contract.connect(wallet);
   const tx = await contractWithSigner.transfer(to, amount);
 
-  console.log(tx.hash);
-  res.json({ tx: tx.hash });
+  res.json({ tx: tx.hash, tx2: tx2.hash });
 });
 
 //
