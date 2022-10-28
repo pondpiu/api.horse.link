@@ -160,8 +160,8 @@ const getMarketDetails = async (provider, address) => {
 
   const [name, target, totalInPlay] = await Promise.all([
     vaultContract.name(),
-    marketContract.getTarget(),
-    marketContract.getTotalInplay()
+    marketContract.getFee(),
+    marketContract.getTotalInPlay()
   ]);
 
   const market = {
@@ -189,21 +189,6 @@ app.get("/markets", async (req, res) => {
   res.end();
 });
 
-app.get("/markets/:address", async (req, res) => {
-  const address = req.params.address;
-  const cached_market = await getCache(`market-${address}`);
-  if (cached_market) {
-    res.send(cached_market);
-    return;
-  }
-
-  const response = await getMarketDetails(getProvider(), address);
-  await setCache(`market-${address}`, response, 60);
-
-  res.send(response);
-  res.end();
-});
-
 app.get("/markets/details", async (req, res) => {
   let market_addresses = await getCache("markets"); // todo: market address
 
@@ -220,6 +205,21 @@ app.get("/markets/details", async (req, res) => {
   }
 
   res.send(markets);
+  res.end();
+});
+
+app.get("/markets/:address", async (req, res) => {
+  const address = req.params.address;
+  const cached_market = await getCache(`market-${address}`);
+  if (cached_market) {
+    res.send(cached_market);
+    return;
+  }
+
+  const response = await getMarketDetails(getProvider(), address);
+  await setCache(`market-${address}`, response, 60);
+
+  res.send(response);
   res.end();
 });
 
@@ -258,6 +258,123 @@ app.get("/vaults", async (req, res) => {
   res.end();
 });
 
+app.get("/vaults/performance", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let performance = ethers.BigNumber.from(0);
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+    const _performance = await vault.getPerformance().catch(e => {
+      console.error(e);
+      return ethers.BigNumber.from(0);
+    });
+    performance = performance.add(_performance);
+  }
+
+  res.json({ performance: performance.toString() });
+});
+
+app.get("/vaults/liquidity", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let assets = ethers.BigNumber.from(0.0);
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _assets = await vault.totalAssets();
+    assets = assets.add(_assets);
+  }
+
+  res.json({ assets: ethers.utils.formatUnits(assets, 18) });
+});
+
+app.get("/vaults/:id/performance", async (req, res) => {
+  const provider = getProvider();
+  let vaults = await getCache("vaults");
+  if (!vaults) {
+    vaults = await getVaultAddresses(provider);
+    await setCache("vaults", vaults, 3600);
+  }
+
+  let performance = 0.0;
+
+  for (let i = 0; i < vaults.length; i++) {
+    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
+
+    const _performance = await vault.getPerformance();
+    performance += Number(_performance);
+  }
+
+  res.json({ performance });
+});
+
+app.get("/vaults/:address/user/:userAddress", async (req, res) => {
+  const { address, userAddress } = req.params;
+  const provider = getProvider();
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+
+  const [bnVaultBalance, bnUserBalance, bnPerformance, decimals, asset] =
+    await Promise.all([
+      vaultContract.totalAssets(),
+      vaultContract.balanceOf(userAddress),
+      vaultContract.getPerformance(),
+      vaultContract.decimals(),
+      vaultContract.asset()
+    ]);
+  return res.json({
+    vaultBalance: ethers.utils.formatUnits(bnVaultBalance, decimals),
+    userBalance: ethers.utils.formatUnits(bnUserBalance, decimals),
+    performance: ethers.utils.formatUnits(bnPerformance, 4),
+    asset
+  });
+});
+
+app.get("/vaults/:address/token", async (req, res) => {
+  const address = req.params.address;
+  const cached_vault_token = await getCache(`vault-${address}-token`);
+  if (cached_vault_token) {
+    res.send(cached_vault_token);
+    return;
+  }
+  const provider = getProvider();
+
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+  const tokenAddress = await vaultContract.asset();
+
+  const tokenContract = new ethers.Contract(
+    tokenAddress,
+    erc_20_abi.abi,
+    provider
+  );
+  const [symbol, decimals] = await Promise.all([
+    tokenContract.symbol(),
+    tokenContract.decimals()
+  ]);
+
+  const vault_token = {
+    symbol,
+    address: tokenAddress,
+    decimals
+  };
+
+  await setCache(`vault-${address}-token`, vault_token, 60);
+
+  res.json(vault_token);
+});
+
 app.get("/vaults/:address", async (req, res) => {
   const address = req.params.address;
   const cached_vault = await getCache(`vault-${address}`);
@@ -293,8 +410,7 @@ app.get("/vaults/:address", async (req, res) => {
 
   await setCache(`vault-${address}`, vault, 60);
 
-  res.send(vault);
-  res.end();
+  res.json(vault);
 });
 
 //
@@ -307,8 +423,9 @@ app.get("/runners/:track/:race/win", async (req, res) => {
   const market_id = `${today}_${track}_${race}_W`;
   const cached_runners = await getCache(market_id);
   let runners;
-
-  if (!cached_runners) {
+  if (cached_runners) {
+    runners = cached_runners;
+  } else {
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-04-17/meetings/R/DBO/races/1?jurisdiction=QLD
     // https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-08-28/meetings/R/SSC/races/1?returnPromo=false&returnOffers=false&jurisdiction=QLD
 
@@ -490,6 +607,8 @@ const getHistory = async placeEventFilter => {
       null,
       null,
       null,
+      null,
+      null,
       placeEventFilter?.owner
     );
     const placedLogs = await market.queryFilter(placedFilter);
@@ -526,73 +645,6 @@ app.get("/history/:account", async (req, res) => {
   res.json({ results });
 });
 
-app.get("/vaultsperformance", async (req, res) => {
-  console.log("here");
-
-  const provider = getProvider();
-  let vaults = await getCache("vaults");
-
-  console.log(vaults);
-
-  if (!vaults) {
-    vaults = await getVaultAddresses(provider);
-    await setCache("vaults", vaults, 3600);
-  }
-
-  let performance = ethers.BigNumber.from(0);
-
-  for (let i = 0; i < vaults.length; i++) {
-    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-    const _performance = await vault.getPerformance().catch(e => {
-      console.error(e);
-      return ethers.BigNumber.from(0);
-    });
-    performance = performance.add(_performance);
-  }
-
-  res.json({ performance: performance.toString() });
-});
-
-// app.get("/vault/:id/performance", async (req, res) => {
-//   const provider = getProvider();
-//   let vaults = await getCache("vaults");
-//   if (!vaults) {
-//     vaults = await getVaultAddresses(provider);
-//     await setCache("vaults", vaults, 3600);
-//   }
-
-//   let performance = 0.0;
-
-//   for (let i = 0; i < vaults.length; i++) {
-//     const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-
-//     const _performance = await vault.getPerformance();
-//     performance += Number(_performance);
-//   }
-
-//   res.json({ performance });
-// });
-
-app.get("/vaultsliquidity", async (req, res) => {
-  const provider = getProvider();
-  let vaults = await getCache("vaults");
-  if (!vaults) {
-    vaults = await getVaultAddresses(provider);
-    await setCache("vaults", vaults, 3600);
-  }
-
-  let assets = ethers.BigNumber.from(0.0);
-
-  for (let i = 0; i < vaults.length; i++) {
-    const vault = new ethers.Contract(vaults[i], vault_abi.abi, provider);
-
-    const _assets = await vault.totalAssets();
-    assets = assets.add(_assets);
-  }
-
-  res.json({ assets: ethers.utils.formatUnits(assets, 18) });
-});
-
 app.get("/inplay", async (req, res) => {
   const provider = getProvider();
   let markets = await getCache("markets");
@@ -606,7 +658,7 @@ app.get("/inplay", async (req, res) => {
   for (let i = 0; i < markets.length; i++) {
     const market = new ethers.Contract(markets[i], market_abi.abi, provider);
 
-    const inplay = await market.getTotalInplay(); // Todo: change to getTotalInPlay
+    const inplay = await market.getTotalInPlay();
     total = total.add(inplay);
   }
 
@@ -660,10 +712,8 @@ app.post("/faucet", async (req, res) => {
 
 //
 app.get("/melbournecup", async (req, res) => {
-
   let runners = await getCache("cup");
   if (!runners) {
-
     const config = {
       method: "get",
       url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-11-01/meetings/R/Racing%20Futures/races/Melbourne%20Cup%20(All%20In)?fixedOdds=true&jurisdiction=QLD",
@@ -701,9 +751,38 @@ app.get("/melbournecup", async (req, res) => {
     });
 
     await setCache("cup", runners, 3600);
-  };
+  }
 
   res.json(runners);
+});
+
+app.get("/allowance", async (req, res) => {
+  const { address, owner, spender, decimals } = req.query;
+  const provider = getProvider();
+  const tokenContract = new ethers.Contract(address, erc_20_abi.abi, provider);
+  const allowance = await tokenContract.allowance(owner, spender);
+  res.json({ allowance: ethers.utils.formatUnits(allowance, decimals) });
+});
+
+app.get("/payout", async (req, res) => {
+  const { marketAddress, propositionId, wager, odds, tokenDecimal } = req.query;
+  const provider = getProvider();
+  const marketContract = new ethers.Contract(
+    marketAddress,
+    market_abi.abi,
+    provider
+  );
+  const b32PropositionId = ethers.utils.formatBytes32String(propositionId);
+  const bnWager = ethers.utils.parseUnits(wager.toString(), tokenDecimal);
+  const ODDS_DECIMAL = 6;
+  const bnOdds = ethers.utils.parseUnits(odds.toString(), ODDS_DECIMAL);
+  const payout = await marketContract.getPotentialPayout(
+    b32PropositionId,
+    bnWager,
+    bnOdds
+  );
+
+  res.json({ potentialPayout: ethers.utils.formatUnits(payout, tokenDecimal) });
 });
 
 app.listen(PORT, err => {
