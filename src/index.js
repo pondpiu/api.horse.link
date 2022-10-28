@@ -301,7 +301,7 @@ app.get("/vaults/liquidity", async (req, res) => {
   res.json({ assets: ethers.utils.formatUnits(assets, 18) });
 });
 
-app.get("/vault/:id/performance", async (req, res) => {
+app.get("/vaults/:id/performance", async (req, res) => {
   const provider = getProvider();
   let vaults = await getCache("vaults");
   if (!vaults) {
@@ -321,6 +321,27 @@ app.get("/vault/:id/performance", async (req, res) => {
   res.json({ performance });
 });
 
+app.get("/vaults/:address/user/:userAddress", async (req, res) => {
+  const { address, userAddress } = req.params;
+  const provider = getProvider();
+  const vaultContract = new ethers.Contract(address, vault_abi.abi, provider);
+
+  const [bnVaultBalance, bnUserBalance, bnPerformance, decimals, asset] =
+    await Promise.all([
+      vaultContract.totalAssets(),
+      vaultContract.balanceOf(userAddress),
+      vaultContract.getPerformance(),
+      vaultContract.decimals(),
+      vaultContract.asset()
+    ]);
+  return res.json({
+    vaultBalance: ethers.utils.formatUnits(bnVaultBalance, decimals),
+    userBalance: ethers.utils.formatUnits(bnUserBalance, decimals),
+    performance: ethers.utils.formatUnits(bnPerformance, 4),
+    asset
+  });
+});
+
 app.get("/vaults/:address/token", async (req, res) => {
   const address = req.params.address;
   const cached_vault_token = await getCache(`vault-${address}-token`);
@@ -338,15 +359,14 @@ app.get("/vaults/:address/token", async (req, res) => {
     erc_20_abi.abi,
     provider
   );
-  const [name, symbol, decimals] = await Promise.all([
-    tokenContract.name(),
+  const [symbol, decimals] = await Promise.all([
     tokenContract.symbol(),
     tokenContract.decimals()
   ]);
 
   const vault_token = {
-    name,
     symbol,
+    address: tokenAddress,
     decimals
   };
 
