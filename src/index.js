@@ -236,7 +236,7 @@ const getVaultAddresses = async provider => {
   const count = await contract.vaultCount();
   const vaults = [];
 
-  for (let i = 0; i < Number(count) - 1; i++) {
+  for (let i = 0; i < Number(count); i++) {
     const vault = await contract.vaults(i);
     vaults.push(vault);
   }
