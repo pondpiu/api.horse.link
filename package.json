@@ -24,13 +24,14 @@
   },
   "homepage": "https://github.com/horse-link/api.horse.link#readme",
   "dependencies": {
+    "async-redis": "^2.0.0",
     "axios": "^0.26.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "ethers": "^5.6.4",
     "express": "^4.17.1",
-    "memory-cache": "^0.2.0",
     "moment": "^2.29.1",
+    "node-cache": "^5.1.2",
     "web3": "^1.6.0",
     "web3-eth-accounts": "^1.6.0"
   },
