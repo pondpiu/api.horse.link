@@ -622,8 +622,8 @@ const getHistory = async placeEventFilter => {
       results.push({
         index: j,
         market_id: market.address,
-        proposition_id,
-        punter: owner,
+        proposition_id: proposition_id?.toString(),
+        punter: owner?.toString(),
         amount: ethers.utils.formatUnits(amount, 18),
         tx: transactionHash,
         blockNumber,
