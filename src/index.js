@@ -720,7 +720,7 @@ app.get("/melbournecup", async (req, res) => {
   if (!runners) {
     const config = {
       method: "get",
-      url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-11-01/meetings/R/FLM/races/7?fixedOdds=true&jurisdiction=QLD",
+      url: "https://api.beta.tab.com.au/v1/tab-info-service/racing/dates/2022-11-01/meetings/R/FLM/races/7?jurisdiction=QLD",
       headers: {}
     };
 
