@@ -617,11 +617,11 @@ const getHistory = async placeEventFilter => {
 
     for (let j = 0; j < placedLogs.length; j++) {
       const { args, transactionHash, blockNumber } = placedLogs[j];
-      const [proposition_id, amount, payout, owner] = args;
+      const [index, proposition_id, marketId, amount, payout, owner] = args;
       const signature = await signMessage(proposition_id);
       results.push({
-        index: j,
-        market_id: market.address,
+        index: index?.toString(),
+        market_id: marketId,
         proposition_id: proposition_id?.toString(),
         punter: owner?.toString(),
         amount: ethers.utils.formatUnits(amount, 18),
